@@ -1,0 +1,75 @@
+[workspace]
+authors = ["Evgenii Kruzhkov <quetalasj@gmail.com>"]
+channels = ["conda-forge"]
+name = "data"
+platforms = ["linux-64"]
+version = "0.1.0"
+
+
+[dependencies]
+# python = "2.7.*"
+# wget = "*"
+
+[feature.py27.dependencies]
+python = "2.7.*"
+
+
+[feature.habitat]
+channels = ["aihabitat"]
+
+[feature.habitat.dependencies]
+python = "3.9.*"
+# habitat-sim = { version = "0.3.3", features = ["headless"] }
+# habitat-sim = "0.3.3=*headless*"
+habitat-sim = { version = "==0.3.3", build = "*headless*" }
+
+[feature.habitat.pypi-dependencies]
+gdown = "*"
+opencv-python-headless = "*"
+hydra-core = "*"
+
+
+[environments]
+legacy = ["py27"]
+habitat = ["habitat"]
+
+
+# ######### Matterport3D tasks ###########
+[tasks.unzip_mp3d]
+cmd = """
+bash -lc '
+unzip v1/tasks/mp3d_habitat.zip  \
+mp3d/5LpN3gDmAk7/* \
+mp3d/gTV8FGcVJC9/* \
+mp3d/jh4fc5c5qoQ/* \
+mp3d/JmbYfDe2QKZ/* \
+mp3d/mJXqzFtmKg4/* \
+mp3d/ur6pFq6Qu1A/* \
+mp3d/UwV83HsGsw3/* \
+mp3d/Vt2qJdWjCF2/* \
+mp3d/YmJkqBEsHnH/*
+' \
+&& mv mp3d/ ~/data/ && rm -rf v1
+"""
+default-environment = "legacy"
+
+[tasks.download_mp3d_config]
+cmd = """
+wget https://dl.fbaipublicfiles.com/habitat/mp3d/config_v1/mp3d.scene_dataset_config.json \
+&&  mv mp3d.scene_dataset_config.json ~/data/mp3d/
+"""
+default-environment = "legacy"
+# depends-on = [{ task = "unpack_mp3d"}]
+
+[tasks.simulation_mp3d]
+cmd = """python data_scripts/matterport/simulation.py"""
+default-environment = "habitat"
+env = { PYTHONPATH = "src" }
+depends-on = [{ task = "download_mp3d_config"}]
+
+[tasks.download_open_scene]
+cmd = """
+wget https://cvg-data.inf.ethz.ch/openscene/models/matterport_lseg.pth.tar \
+&& mkdir -p ~/data/models \
+&& mv matterport_lseg.pth.tar ~/data/models
+"""

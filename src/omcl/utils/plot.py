@@ -1,5 +1,9 @@
 import torch
 from scipy.spatial.transform import Rotation as R
+import cv2
+import numpy as np
+from omcl.utils.rays import ray_trace_pose_batched, transform_rays_batched
+
 
 def plot_floor(scene_name, config, viser_server):
     side_length = 2**config.scene[scene_name].max_level * config.scene[scene_name].resolution
@@ -15,3 +19,148 @@ opengl_mat = torch.tensor([
 def mp3d_pose2viser_wxyz(pose):
     quat_camera =  R.from_matrix(pose[:3,:3].cpu().float() @ opengl_mat).as_quat()
     return (quat_camera[-1], *quat_camera[:-1])
+
+
+def mp3d_rot2viser_wxyz(rot):
+    quat_camera =  R.from_matrix(rot.cpu().float() @ opengl_mat).as_quat()
+    return (quat_camera[-1], *quat_camera[:-1])
+
+def mp3d_rot2viser_wxyz2(rot):   # just for debug purposes
+    quat_camera =  R.from_matrix(rot.cpu().float()).as_quat()
+    return (quat_camera[-1], *quat_camera[:-1])
+
+
+def plot_camera_rgb(pose, rgb_image, hfov, aspect, viser_server, scale=0.25):
+    if rgb_image is None:
+        image = None
+    else:
+        image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
+    _ = viser_server.scene.add_camera_frustum(name='cam', 
+                                              fov=hfov, 
+                                              aspect=aspect, 
+                                              position=pose[:3, -1].cpu(),
+                                              scale=scale,
+                                              wxyz=mp3d_pose2viser_wxyz(pose),
+                                              image=image,
+                                            color=[255,0,0],
+                                            line_width=6)
+
+def plot_paricles(particles, hfov, aspect, viser_server, stride=8, visible=True):
+    for i in range(len(particles)):
+        if i % stride == 0:
+            p = particles[i]
+            _ = viser_server.scene.add_camera_frustum(name=f'p_{i}', 
+                                                fov=hfov, 
+                                                aspect=aspect, 
+                                                position=p[:3, -1].cpu(),
+                                                scale=0.25,
+                                                wxyz=mp3d_pose2viser_wxyz(p),
+                                                visible=visible)
+
+def plot_camera_frame(name, position, rot33, color, hfov, aspect, viser_server, image=None, scale=0.25):
+    viser_server.scene.add_camera_frustum(name=name, 
+                                              fov=hfov, 
+                                              aspect=aspect, 
+                                              position=position.cpu(),
+                                              scale=scale,
+                                              wxyz=mp3d_rot2viser_wxyz(rot33),
+                                              image=image,
+                                              color=color)
+
+
+def plot_map_nodes(point_hierarchy, spc_labels, pyramid, scene_name, scale, config, d3_40_colors_rgb, viser_server, stride=1):
+    num_nodes = 2**config.scene[scene_name].max_level
+    node_size = 2/num_nodes
+    gpts = -1. + (point_hierarchy.cpu()[pyramid[1, -2]:pyramid[1, -1]])  * node_size + 0.5*node_size
+    if stride > 1:
+        points = gpts[::stride].cpu().numpy()*scale
+        colors = d3_40_colors_rgb[spc_labels[::stride].int()] / 255
+    else:
+        points = gpts.cpu().numpy()*scale
+        colors = d3_40_colors_rgb[spc_labels.int()] / 255
+    _ = viser_server.scene.add_point_cloud(
+        name="map_nodes",
+        points=points,
+        colors=colors,
+        point_size=config.scene[scene_name].resolution,
+        visible=False)
+    
+    
+def plot_data_points(points, points_labels, d3_40_colors_rgb, viser_server):
+    # for debug: should look the same as map_nodes
+    _ = viser_server.scene.add_point_cloud(
+        name="loaded_points",
+        points=np.array(points),
+        colors=d3_40_colors_rgb[points_labels] / 255,
+        point_size=0.02,
+        visible=False)
+    
+    
+def plot_semantic_camera(image1, image2, position, rotf33, color, hfov, aspect, viser_server):
+    image = np.zeros_like(image1)
+   
+    image[:, :image.shape[1]//2] =  cv2.cvtColor(image1, cv2.COLOR_BGR2RGB)[:, :image.shape[1]//2]
+    image[:, image.shape[1]//2:] =  cv2.cvtColor(image2, cv2.COLOR_BGR2RGB)[:, image.shape[1]//2:]
+    _ = viser_server.scene.add_camera_frustum(name='sem_cam', 
+                                              fov=hfov, 
+                                              aspect=aspect, 
+                                              position=position.cpu(),
+                                              scale=0.25,
+                                              wxyz=mp3d_pose2viser_wxyz(rot33),
+                                              image=image,
+                                            color=color,
+                                            line_width=6)
+
+
+def raycast_view(rays_o, 
+                 rays_d, 
+                 particle, 
+                 spc,
+                 point_hierarchy, 
+                 spc_labels, 
+                 scale,
+                 colors_map):
+    
+    rays_o_pose_batched, rays_d_pose_batched = transform_rays_batched(rays_o, rays_d, particle[None])
+    closest_rays_indx_batched, _, rays_ids_batched, batches_mask = ray_trace_pose_batched(rays_o_pose_batched / scale, 
+                                                                        rays_d_pose_batched,
+                                                                        spc, 
+                                                                        point_hierarchy, 
+                                                                        spc_labels)
+    return colors_map[rays_ids_batched], batches_mask[0], rays_o_pose_batched, rays_d_pose_batched
+
+def plot_raycast_view(rays_o, 
+                 rays_d, 
+                 particle, 
+                 spc,
+                 point_hierarchy, 
+                 spc_labels, 
+                 scale,
+                 colors_map,
+                 viser_server, 
+                 hfov,
+                 width, height, color):
+    with torch.no_grad():
+        rays_colors, image_mask, rays_o_pose_batched, rays_d_pose_batched = raycast_view(rays_o, rays_d, particle, spc, point_hierarchy, spc_labels, scale, colors_map)
+        rays_image = np.zeros((image_mask.shape[0], 3))
+        rays_image[image_mask.cpu()] = rays_colors
+        aspect = width/height
+   
+        _ = viser_server.scene.add_camera_frustum(name='raycast_view', 
+                                                    fov=hfov, 
+                                                    aspect=aspect, 
+                                                    position=particle[:3, -1].cpu(),
+                                                    scale=0.25,
+                                                    wxyz=mp3d_pose2viser_wxyz(particle[:3, :3]),
+                                                    image=rays_image.reshape((height, width, 3))/255,
+                                                    color=color,
+                                                    line_width=6)
+             
+        points = ((rays_o_pose_batched + rays_d_pose_batched)[0][image_mask]).cpu().numpy()
+        colors = rays_colors
+        _ = viser_server.scene.add_point_cloud(
+            name="rays",
+            points=points,
+            colors=colors,
+            point_size=0.02,
+            visible=False)

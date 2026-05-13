@@ -3,7 +3,7 @@ import torch
 from tqdm.auto import trange, tqdm
 
 
-def points_features2octree(points, points_labels, max_level, resolution, vectorised=False):
+def points_features2octree(points, points_labels, max_level, resolution, vectorize=False):
     num_nodes = 2**max_level
     node_size = 2 / num_nodes
     assert points.is_cuda, "`points` should be on gpu otherwise spc raises exceptions"
@@ -23,14 +23,14 @@ def points_features2octree(points, points_labels, max_level, resolution, vectori
     octree = spc.octrees
     max_level, pyramids, exsum = kal.ops.spc.scan_octrees(
         octree, torch.tensor([len(octree)], dtype=torch.int32, device='cpu'))
-    # find corresponding points_labels for octree nodes TODO: just average values in nodes?
+    # find corresponding points_labels for octree nodes TODO: average values in nodes?
     q_points = kal.ops.spc.quantize_points(points, max_level)
     pidx = kal.ops.spc.unbatched_query(spc.octrees, exsum, query_coords=q_points, level=max_level, with_parents=False)
     points_indixes = pidx - pyramids[0,1,-2] # To make min == 0
     assert points.shape[0] == points_indixes.shape[0]
 
     spc_labels = torch.zeros(points_indixes.max() - points_indixes.min()+1, dtype=points_labels.dtype)
-    if vectorised:
+    if vectorize:
         spc_labels[points_indixes - points_indixes.min()] = points_labels
     else:
         # rays iteration

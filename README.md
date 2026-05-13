@@ -20,7 +20,7 @@ We use <a href="https://pixi.prefix.dev/latest/"> pixi</a> for easier datasets m
     
     curl -fsSL https://pixi.sh/install.sh | sh
 
-All commands should be executed from this `.` directory.
+All commands work from this `.` directory.
 #### KITTI
     TODO
 #### Matterport 3D

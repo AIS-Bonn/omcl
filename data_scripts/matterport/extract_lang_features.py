@@ -97,7 +97,7 @@ def main(config: DictConfig):
             image_features = pix_features[0].permute((1,2,0)).half()
             return image_features
         
-    for scene in config.paths.scenes:
+    for scene in config.dataset.scenes:
         print("Scene: ", scene)
         process_frames(viser_server, scene_name=scene, config=config, lang_features_from_rgb=predict_image)
 

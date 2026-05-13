@@ -1,12 +1,29 @@
-# OMCL: Open-vocabulary Monte Carlo Localization
-This repository will contain the source code for the paper
-<h2 align="center">
-  <a href="https://github.com/AIS-Bonn/omcl">Paper</a> |
-  <a href="https://github.com/AIS-Bonn/omcl">Project Page (TODO)</a> |
-  <a href="https://github.com/AIS-Bonn/omcl">Video (TODO)</a> 
-</h2>
+<h3 align="left">
+  <a href="https://arxiv.org/abs/2512.15557">Paper</a> |
+  <a href="https://github.com/AIS-Bonn/omcl">Video (soon)</a>  
+</h3>
 
-    Code release coming soon.
+# OMCL: Open-vocabulary Monte Carlo Localization
+
+We present <b>OMCL</b> (Open-vocabulary Monte Carlo Localization), a localization framework that extends <b>Monte Carlo Localization</b> with <b>vision-language features</b>.
+Our <b>Ocree Language Map</b> enables <b>OMCL</b> to perform <b>visual-only</b> localization in 3D environments while generalizing across different scales.
+By grounding pose estimation in language features, <b>OMCL</b> accelerates global localization through <b>open-vocabulary prompts</b>.
+
+<div style="margin-top: 10px;"><b>Cross-modal sensor support:</b></div>
+<div style="margin-left: 12px;">
+<div>Mapping:</div>
+<ul style="margin-top: 0; margin-bottom: 0;">
+  <li><i>RGB-D</i></li>
+  <li><i>Point clouds</i></li>
+</ul>
+<div>Localization:</div>
+<ul style="margin-top: 0; margin-bottom: 0;">
+  <li><i>Visual (RGB)</i></li>
+</ul>
+</div>
+
+## Approach
+![](media/pipeline.jpg)
 
 ## Installation 
 Build Docker image: 

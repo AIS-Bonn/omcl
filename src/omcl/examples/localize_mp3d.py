@@ -24,7 +24,7 @@ def visualize_odometry():
 )
 def main(config: DictConfig):
     viser_server = viser.ViserServer()
-    for scene in config.paths.scenes:
+    for scene in config.dataset.scenes:
         print(scene)
         plot_floor(scene, config, viser_server)
         # data_path, points, points_labels, poses44, pose_init, rot_init, features_db, features_labels = load_data('5LpN3gDmAk7_1', config)

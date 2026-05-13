@@ -1,1 +1,120 @@
 name: semantic_kitti
+
+scenes:
+    - "00"
+    - "01"
+    - "02"
+    - "03"
+    - "04"
+    - "05"
+    - "06"
+    - "07"
+    - "08"
+    - "09"
+    - "10"
+
+
+mesh_max_res: 0.01 # in meters
+sem_gt_from_mesh: False
+
+simulation:
+    download_poses: False   # don't download if exists
+
+    rgb: true
+    depth: true
+    semantic: true
+    step: 3
+
+    resolution:
+        w: 1024
+        h: 64 #720, currently it is always square in simulation
+    camera_height: 1.5
+
+    base2cam_rot: [1, 0, 0, 0, -1, 0, 0, 0, -1]
+    base_forward_axis: [0, 0, -1]
+    base_left_axis: [-1, 0, 0]
+    base_up_axis: [0, 1, 0]
+    # cam_calib_mat: [540, 0, 540, 0, 540, 360, 0, 0, 1]  # or get_sim_cam_mat_with_fov from vlmaps.utils.mapping_utils
+    hfov: 360 # back_rgb_sensor_spec.hfov -> Deg(90)
+
+    ignore_indx: -1000
+
+scenes_config:
+    "00":
+        min_height: -0.3  # relative to the floor
+        max_height: 1.5 # relative to the camera init height
+        resolution: 0.05
+        max_level: 13
+        shift_x: 0
+        shift_y: 0
+    "01":
+        min_height: -0.3  # relative to the floor
+        max_height: 1.5 # relative to the camera init height
+        resolution: 0.05
+        max_level: 13
+        shift_x: 0
+        shift_y: 0
+    "02":
+        min_height: -0.3  # relative to the floor
+        max_height: 1.5 # relative to the camera init height
+        resolution: 0.05
+        max_level: 13
+        shift_x: 0
+        shift_y: 0
+    "03":
+        min_height: -0.3  # relative to the floor
+        max_height: 1.5 # relative to the camera init height
+        resolution: 0.05
+        max_level: 13
+        shift_x: 0
+        shift_y: 0
+    "04":
+        min_height: -0.3  # relative to the floor
+        max_height: 1.5 # relative to the camera init height
+        resolution: 0.05
+        max_level: 13
+        shift_x: 0
+        shift_y: 0
+    "05":
+        min_height: -0.3  # relative to the floor
+        max_height: 1.5 # relative to the camera init height
+        resolution: 0.05
+        max_level: 13
+        shift_x: 0
+        shift_y: 0
+    "06":
+        min_height: -0.3  # relative to the floor
+        max_height: 1.5 # relative to the camera init height
+        resolution: 0.05
+        max_level: 13
+        shift_x: 0
+        shift_y: 0
+    "07":
+        min_height: -0.3  # relative to the floor
+        max_height: 1.5 # relative to the camera init height
+        resolution: 0.05
+        max_level: 13
+        shift_x: 0
+        shift_y: 0
+    "08":
+        min_height: -0.3  # relative to the floor
+        max_height: 1.5 # relative to the camera init height
+        resolution: 0.05
+        max_level: 13
+        shift_x: 0
+        shift_y: 0
+    "09":
+        min_height: -0.3  # relative to the floor
+        max_height: 1.5 # relative to the camera init height
+        resolution: 0.05
+        max_level: 13
+        shift_x: 0
+        shift_y: 0
+    "10":
+        min_height: -0.3  # relative to the floor
+        max_height: 1.5 # relative to the camera init height
+        resolution: 0.05
+        max_level: 13
+        shift_x: 0
+        shift_y: 0
+      

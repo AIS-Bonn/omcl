@@ -1,1 +1,120 @@
 name: vlmaps_dataset
+
+scenes:
+    # - 5LpN3gDmAk7_1 # 0
+    # - gTV8FGcVJC9_1 # 1
+    # - jh4fc5c5qoQ_1 # 2
+    # - JmbYfDe2QKZ_1 # 3
+    - JmbYfDe2QKZ_2 # 4
+    # - mJXqzFtmKg4_1 # 5
+    # - ur6pFq6Qu1A_1 # 6
+    # - UwV83HsGsw3_1 # 7
+    # - Vt2qJdWjCF2_1 # 8
+    # - YmJkqBEsHnH_1 # 9
+
+mesh_max_res: 0.01 # in meters
+sem_gt_from_mesh: True
+
+simulation:
+    download_poses: True   # don't download if exists
+
+    rgb: true
+    depth: true
+    semantic: true
+    step: 3
+
+    resolution:
+        w: 540
+        h: 540 #720, currently it is always square in simulation
+    camera_height: 1.5
+
+    base2cam_rot: [1, 0, 0, 0, -1, 0, 0, 0, -1]
+    base_forward_axis: [0, 0, -1]
+    base_left_axis: [-1, 0, 0]
+    base_up_axis: [0, 1, 0]
+    # cam_calib_mat: [540, 0, 540, 0, 540, 360, 0, 0, 1]  # or get_sim_cam_mat_with_fov from vlmaps.utils.mapping_utils
+    hfov: 90 # back_rgb_sensor_spec.hfov -> Deg(90)
+
+    ignore_indx: -1000
+
+scenes_config:
+    5LpN3gDmAk7_1:
+        min_height: -0.3  # relative to the floor
+        max_height: 1.5 # relative to the camera init height
+        resolution: 0.02
+        max_level: 11
+        shift_x: 0
+        shift_y: 0
+
+    JmbYfDe2QKZ_1:
+        min_height: -0.3
+        max_height: 1.1
+        resolution: 0.02
+        max_level: 11
+        shift_x: 0
+        shift_y: 0
+
+    YmJkqBEsHnH_1:
+        min_height: -100.
+        max_height: 2.
+        resolution: 0.02
+        max_level: 11
+        shift_x: 0
+        shift_y: 0
+
+    gTV8FGcVJC9_1:
+        min_height: -2.
+        max_height: 0.8
+        resolution: 0.02
+        max_level: 12
+        shift_x: 0
+        shift_y: 0
+
+    jh4fc5c5qoQ_1:
+        min_height: -1.
+        max_height: 1.1
+        resolution: 0.02
+        max_level: 11
+        shift_x: 0
+        shift_y: 0
+
+
+    JmbYfDe2QKZ_2:
+        min_height: -1.
+        max_height: 0.7
+        resolution: 0.02
+        max_level: 11
+        shift_x: 0
+        shift_y: 0
+
+    UwV83HsGsw3_1:
+        min_height: -2
+        max_height: 0.8
+        resolution: 0.02
+        max_level: 11
+        shift_x: 0
+        shift_y: 0
+
+    mJXqzFtmKg4_1:
+        min_height: -1
+        max_height: 1.5
+        resolution: 0.02
+        max_level: 12
+        shift_x: 0
+        shift_y: 0
+
+    ur6pFq6Qu1A_1:
+        min_height: -1
+        max_height: 0.7
+        resolution: 0.02
+        max_level: 12
+        shift_x: 0
+        shift_y: 0
+
+    Vt2qJdWjCF2_1:
+        min_height: -1
+        max_height: 0.7
+        resolution: 0.02
+        max_level: 13
+        shift_x: 0
+        shift_y: 0

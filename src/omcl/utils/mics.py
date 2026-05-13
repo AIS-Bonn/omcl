@@ -46,10 +46,8 @@ def load_data(scene_name, config, device):
     map_path = os.path.join(data_path, f"{config.visual_model.name}_octree_map.pt")
     print(f'LOADED MAP: {map_path}')
     octree_map = torch.load(map_path, weights_only=True)
-    map_features_db = octree_map['map_features']
-    rgb_features_db = octree_map['rgb_features']
-    return (data_path, octree_map['points'].float(), octree_map['points_labels'], 
-            poses44, T_init, map_features_db, rgb_features_db, octree_map['vis_scene_features'].to(device))
+    return (data_path, octree_map['points'].float(), octree_map['points_features_idx'], 
+            poses44, T_init, octree_map['map_features'], octree_map['rgb_features'], octree_map['vis_scene_features'].to(device))
     
 
 

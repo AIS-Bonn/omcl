@@ -17,7 +17,7 @@ def get_sim_cam_mat_with_fov(h, w, fov):
 
 def make_intrinsics(config, hfov=90):
     hfov = hfov * np.pi / 180.
-    W = max(config.simulate.resolution.w, config.simulate.resolution.h)
+    W = max(config.dataset.simulation.resolution.w, config.dataset.simulation.resolution.h)
     K = np.array([
     [1 / np.tan(hfov / 2.), 0., 0., 0.],
     [0., 1 / np.tan(hfov / 2.), 0., 0.],
@@ -69,7 +69,7 @@ def get_scene_labels(scene_dir, config):
     ids = []
     ids2labels = {}
     for id, label in classes_map.values():
-        if label == "" or id == config.simulate.ignore_indx:
+        if label == "" or id == config.dataset.simulation.ignore_indx:
             continue
         if id not in ids:
             ids.append(id)

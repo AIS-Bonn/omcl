@@ -6,7 +6,7 @@ from omcl.utils.rays import ray_trace_pose_batched, transform_rays_batched
 
 
 def plot_floor(scene_name, config, viser_server):
-    side_length = 2**config.scene[scene_name].max_level * config.scene[scene_name].resolution
+    side_length = 2**config.dataset.scenes_config[scene_name].max_level * config.dataset.scenes_config[scene_name].resolution
     _ = viser_server.scene.add_grid('floor', width=side_length, height=side_length, width_segments=50, position=(0,0, -1.5),
                                     visible=config.vis.floor)
 
@@ -68,8 +68,8 @@ def plot_camera_frame(name, position, rot33, color, hfov, aspect, viser_server, 
                                               color=color)
 
 
-def plot_map_nodes(vis_features, map_features_db, point_hierarchy, spc_labels, pyramid, scene_name, scale, config, d3_40_colors_rgb, viser_server, stride=1):
-    num_nodes = 2**config.scene[scene_name].max_level
+def plot_map_nodes(vis_features, map_features_db, point_hierarchy, spc_labels, pyramid, scale, scene_config, d3_40_colors_rgb, viser_server, stride=1):
+    num_nodes = 2**scene_config.max_level
     node_size = 2/num_nodes
     gpts = -1. + (point_hierarchy.cpu()[pyramid[1, -2]:pyramid[1, -1]])  * node_size + 0.5*node_size
     vis_ids = (map_features_db[spc_labels].cuda() @ vis_features.T).argmax(-1).cpu()
@@ -84,7 +84,7 @@ def plot_map_nodes(vis_features, map_features_db, point_hierarchy, spc_labels, p
         name="map_nodes",
         points=points,
         colors=colors,
-        point_size=config.scene[scene_name].resolution,
+        point_size=scene_config.resolution,
         visible=False)
     
     

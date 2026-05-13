@@ -39,6 +39,7 @@ def get_map_dict_features(data_path, config, device):
 
 def generate_gt(viser_server: viser.ViserServer, scene_name: str, config: DictConfig, submap_size=500):
     scene_dir, poses44, T_init = mp3d_load_poses(scene_name, config)
+    scene_config = config.dataset.scenes_config[scene_name]
     depth_dir = os.path.join(scene_dir, 'depth')
     semantic_dir = os.path.join(scene_dir, f'{config.visual_model.name}_semantic')
 
@@ -56,7 +57,7 @@ def generate_gt(viser_server: viser.ViserServer, scene_name: str, config: DictCo
     # configure
     intrinsics = make_intrinsics(config)
     odoms = estimate_odoms(poses44, T_init)
-    min_height  = -config.simulate.camera_height + config.scene[scene_name].min_height
+    min_height  = -config.dataset.simulation.camera_height + scene_config.min_height
     device = 'cuda'
     submaps = []
     map_points, map_features, map_n_means = init_map(config, device, feature_size=config.visual_model.features_size)
@@ -76,7 +77,7 @@ def generate_gt(viser_server: viser.ViserServer, scene_name: str, config: DictCo
         depth_img = np.load(os.path.join(depth_dir, f'{id_str}.npy'))            
         # transform and preprocess data
         xyz, depth_mask = depth2pc(depth_img=depth_img, intrinsics=intrinsics)
-        xyz, crop_mask = crop_height(xyz, pose, config.scene[scene_name].max_height, min_height)
+        xyz, crop_mask = crop_height(xyz, pose, scene_config.max_height, min_height)
         if PREDICT_ON_POINTS:
             xyz_features = None
         else:
@@ -86,7 +87,7 @@ def generate_gt(viser_server: viser.ViserServer, scene_name: str, config: DictCo
         xyz = (pose_dev[:3, :3] @ torch.from_numpy(xyz).to(device) + pose_dev[:3, -1][..., None]).T
         # mapping
         map_points, map_features, map_n_means = increment_map(map_points, map_features, xyz, xyz_features, map_n_means, 
-                      max_level=config.scene[scene_name].max_level, resolution=config.scene[scene_name].resolution, device=device)
+                      max_level=scene_config.max_level, resolution=scene_config.resolution, device=device)
         
         
         if ((seq_num % submap_size == 0) and (seq_num > 0)) or (seq_num == last_data_id):
@@ -95,13 +96,13 @@ def generate_gt(viser_server: viser.ViserServer, scene_name: str, config: DictCo
             # visualization
             if not PREDICT_ON_POINTS:
                 colors = sem_colors[(map_features @ rgb_features_db.T).cpu().argmax(-1)]
-                viser_server.add_point_cloud(name="submap", points=submaps[-1][0].numpy(), colors=colors, point_size=config.scene[scene_name].resolution)
+                viser_server.add_point_cloud(name="submap", points=submaps[-1][0].numpy(), colors=colors, point_size=scene_config.resolution)
             else:
-                viser_server.add_point_cloud(name="submap", points=submaps[-1][0].numpy(), colors=np.ones((len(submaps[-1][0]), 3))* 0.5, point_size=config.scene[scene_name].resolution)
+                viser_server.add_point_cloud(name="submap", points=submaps[-1][0].numpy(), colors=np.ones((len(submaps[-1][0]), 3))* 0.5, point_size=scene_config.resolution)
             # init next submap
             map_points, map_features, map_n_means = init_map(config, device, feature_size=config.visual_model.features_size)
 
-    map_points, map_features, map_n_means = merge_submaps(submaps, config.scene[scene_name].max_level, config.scene[scene_name].resolution, 'cpu')
+    map_points, map_features, map_n_means = merge_submaps(submaps, scene_config.max_level, scene_config.resolution, 'cpu')
     print("submaps are merged")
     # viser_server.add_point_cloud(name="map", points=map_points.cpu().numpy(), colors=np.ones((len(map_points), 3))* 0.5, point_size=config.scene[scene_name].resolution)
     # breakpoint()
@@ -120,14 +121,14 @@ def generate_gt(viser_server: viser.ViserServer, scene_name: str, config: DictCo
     idx = (map_features.cuda() @ map_features_db.T.cuda()).cpu().argmax(-1)
     
     vis_ids = (map_features_db[idx].cuda() @ vis_scene_features.T).argmax(-1).cpu()
-    viser_server.add_point_cloud(name="map", points=map_points[::2].cpu().numpy(), colors=sem_colors[vis_ids][::2], point_size=config.scene[scene_name].resolution)
+    viser_server.add_point_cloud(name="map", points=map_points[::2].cpu().numpy(), colors=sem_colors[vis_ids][::2], point_size=scene_config.resolution)
 
     torch.save({'points': map_points, 
-                'points_labels': idx,
+                'points_features_idx': idx,
                 'map_features': map_features_db,
-                'map_labels': map_labels_db,
+                # 'map_labels': map_labels_db,
                 'rgb_features': rgb_features_db,
-                'rgb_labels': rgb_labels_db,
+                # 'rgb_labels': rgb_labels_db,
                 'vis_scene_features': vis_scene_features.cpu()}, 
                 os.path.join(scene_dir, f"{config.visual_model.name}_octree_map.pt"))
     
@@ -138,7 +139,7 @@ def generate_gt(viser_server: viser.ViserServer, scene_name: str, config: DictCo
 )
 def main(config: DictConfig):
     viser_server = viser.ViserServer()
-    for scene in config.paths.scenes:
+    for scene in config.dataset.scenes:
         print(scene)
         plot_floor(scene, config, viser_server)
         generate_gt(viser_server, scene_name=scene, config=config, submap_size=100)

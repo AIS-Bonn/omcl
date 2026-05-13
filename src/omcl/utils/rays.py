@@ -14,12 +14,10 @@ def get_sim_cam_mat_with_fov(h, w, fov):
     return cam_mat
 
 
-def create_rays(pose, config, T_init):
+def create_rays(pose, height, width, fov, T_init):
     pose2 = T_init.to(device=pose.device, dtype=pose.dtype) @ pose.clone().detach()
     pose2[:3,:3] = pose[:3,:3].clone().detach()
-    calib_mat = get_sim_cam_mat_with_fov(h=config.simulate.resolution.h,
-                         w=config.simulate.resolution.w,
-                         fov=config.simulate.hfov)
+    calib_mat = get_sim_cam_mat_with_fov(h=height, w=width, fov=fov)
     print(calib_mat)
     print(calib_mat[0][0])
     print(calib_mat[1][1])
@@ -30,8 +28,8 @@ def create_rays(pose, config, T_init):
         # x0=config.simulate.cam_calib_mat[2],
         focal_y=calib_mat[1][1],
         # y0=config.simulate.cam_calib_mat[5],
-        width=config.simulate.resolution.w,
-        height=config.simulate.resolution.h,
+        width=width,
+        height=height,
         device=pose.device)
     
     rays_o, rays_d = kal.render.camera.generate_pinhole_rays(camera=cam)

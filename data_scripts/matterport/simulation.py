@@ -260,7 +260,7 @@ def generate_scene_data(save_dir: Union[Path, str], config: DictConfig, scene_pa
 )
 def main(config: DictConfig) -> None:
     # config = config.matterport
-    print(config.paths)
+    print(config)
     os.environ["MAGNUM_LOG"] = "quiet"
     os.environ["HABITAT_SIM_LOG"] = "quiet"
     os.environ['HYDRA_FULL_ERROR'] = '1'
@@ -269,7 +269,7 @@ def main(config: DictConfig) -> None:
     os.makedirs(target_dir, exist_ok=True)
     dataset_dir = Path(target_dir) / f'{config.dataset.name}'
     print("PATH: ", dataset_dir)
-    if not dataset_dir.exists() or config.simulate.download_poses:
+    if not dataset_dir.exists() or config.dataset.simulation.download_poses:
         zip_filepath = dataset_dir.parent / "vlmaps_dataset.zip"
         gdown.download(
             "https://drive.google.com/file/d/1KaRi1VnY7C_TT1WckDWxHvP4v3MTNu1a/view?usp=sharing",
@@ -281,8 +281,8 @@ def main(config: DictConfig) -> None:
         subprocess.run(["unzip", zip_filepath.as_posix(), "-d", dataset_dir.parent.as_posix()])
     
     data_dirs = sorted([x for x in dataset_dir.iterdir() if x.is_dir()])
-    if config.paths.scenes:
-        data_dirs = sorted([dataset_dir / x for x in config.paths.scenes])
+    if config.dataset.scenes:
+        data_dirs = sorted([dataset_dir / x for x in config.dataset.scenes])
     pbar = tqdm(data_dirs)
     mp3d_scene_config_path = os.path.join(mp3d_dir, 'mp3d.scene_dataset_config.json')
     assert os.path.exists(mp3d_scene_config_path), f'{mp3d_scene_config_path} does not exist'
@@ -302,7 +302,7 @@ def main(config: DictConfig) -> None:
                         os.remove(rm_old_data)
         # save_dir = dataset_dir.parent / config.dataset.name / data_dir.name
         # breakpoint()
-        generate_scene_data(data_dir, config.simulate, scene_path, poses, mp3d_scene_config_path)
+        generate_scene_data(data_dir, config.dataset.simulation, scene_path, poses, mp3d_scene_config_path)
 
 
 if __name__ == "__main__":

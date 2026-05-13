@@ -1,10 +1,12 @@
 defaults:
-  - dataset: vlmaps
-  - paths: ${dataset}
-  - optional simulate: ${dataset}
-  - scene: ${dataset}
-  - visual_model: lseg  #open_scene
-  - _self_
+    - dataset: vlmaps
+    - visual_model: lseg  #open_scene
+    - _self_
+
+paths:
+    all_data: 'data'
+
+semantic_grounding: True
 
 num_particles: 1024  # 256 1024
 std_t: 0.1
@@ -21,14 +23,14 @@ init_std_x: 0.3
 init_std_y: 0.3
 
 global_localization:
-  active: False
-  distances: [2., 1., 0.5, 0.2, 0.1]
+    active: False
+    distances: [2., 1., 0.5, 0.2, 0.1]
 
 vis:
-  demo: False
-  floor: False
-  plot_gt: True
-  plot_estimated: True
-  plot_particles: True
-  particles_stride: 32
-  num_colors: 200
+    demo: False
+    floor: False
+    plot_gt: True
+    plot_estimated: True
+    plot_particles: True
+    particles_stride: 32
+    num_colors: 200

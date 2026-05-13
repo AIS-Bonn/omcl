@@ -257,8 +257,6 @@ def prepare_pf(first_pose_id, odoms, poses44, T_init, config, device, data_path)
         pose = pose @ combine_odoms(odoms, 0, i_prev)
     
     particles, weights = init_particles(pose, T_init, std=[config.init_std_x, config.init_std_y, 0.], N=config.num_particles)
-    h = config.simulate.resolution.h
-    w = config.simulate.resolution.w
     
     if config.visual_model.name == 'open_scene':
         scene_dir = os.path.join(data_path,  f"lseg_semantic")
@@ -266,8 +264,8 @@ def prepare_pf(first_pose_id, odoms, poses44, T_init, config, device, data_path)
         scene_dir = os.path.join(data_path,  f"{config.visual_model.name}_semantic")
     print(f"{scene_dir} is ised")
 
-    aspect = config.simulate.resolution.w/config.simulate.resolution.h
-    hfov = math.radians(config.simulate.hfov)
+    aspect = config.dataset.simulation.resolution.w / config.dataset.simulation.resolution.h
+    hfov = math.radians(config.dataset.simulation.hfov)
 
     return i_prev, odoms, pose, particles, weights, scene_dir, aspect, hfov
 
@@ -281,6 +279,7 @@ def load_octree_map(points, points_labels, scene_name, config):
 def run(scene_name, config, first_pose_id=0, device='cuda', viser_server=None, octree_map=None, batch_size=1000, inital_particles=None):
     torch.set_grad_enabled(False)
     print("loading the data")
+    scene_config = config.dataset.scenes_config[scene_name]
     (data_path, points, points_labels, poses44, T_init, 
       map_features_db, rgb_features_db, vis_scene_features) = load_data(scene_name, config, device)
     map_features_db_device = map_features_db.to(device)
@@ -293,8 +292,8 @@ def run(scene_name, config, first_pose_id=0, device='cuda', viser_server=None, o
         print("Create octree map")
         points = points.cuda()
         spc, spc_labels, scale =  points_features2octree(points, points_labels, 
-                                                        config.scene[scene_name].max_level, 
-                                                        config.scene[scene_name].resolution,
+                                                        scene_config.max_level, 
+                                                        scene_config.resolution,
                                                         vectorize=True)
         points = points.cpu()
         octree_map = (spc, spc_labels, scale)
@@ -309,12 +308,15 @@ def run(scene_name, config, first_pose_id=0, device='cuda', viser_server=None, o
         plot_data_points(points.cpu(), points_labels, colors_map, viser_server)
         plot_floor(scene_name, config, viser_server)
         # remap map colors to rgb_features_db  colors
-        plot_map_nodes(vis_scene_features, map_features_db, point_hierarchy, spc_labels, pyramid, scene_name, scale, config, colors_map, viser_server, stride=2)
+        plot_map_nodes(vis_scene_features, map_features_db, point_hierarchy, spc_labels, pyramid, scale, scene_config, colors_map, viser_server, stride=2)
     print("run")
 
     i_prev, odoms, pose, particles, weights, scene_dir, aspect, hfov = prepare_pf(first_pose_id, odoms, poses44, T_init, config, device, data_path)    
     # rays can always be on GPU
-    rays_o, rays_d, cam = create_rays(poses44[0].clone().detach().cuda(), config, T_init)
+    width = config.dataset.simulation.resolution.w
+    height = config.dataset.simulation.resolution.h
+    fov_deg = config.dataset.simulation.hfov
+    rays_o, rays_d, cam = create_rays(poses44[0].clone().detach().cuda(), height, width, fov_deg, T_init)
     rays_origin_colors, _, _, _ = read_pf_data(scene_dir, 0, rgb_features_db, config)
     _ = viser_server.scene.add_point_cloud(
         name="rays_origin",
@@ -402,7 +404,7 @@ def run(scene_name, config, first_pose_id=0, device='cuda', viser_server=None, o
                     plot_raycast_view(rays_o, rays_d, estimated, spc, point_hierarchy, spc_labels, scale, 
                                       map_features_db, vis_scene_features,
                                       colors_map, viser_server, hfov, 
-                                      config.simulate.resolution.w, config.simulate.resolution.h, [0,0,255])
+                                      width, height, [0,0,255])
                         
                     if config.vis.demo:
                         __estimated_semantic_pose = mean_pose

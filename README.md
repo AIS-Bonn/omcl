@@ -38,8 +38,7 @@ We use <a href="https://pixi.prefix.dev/latest/"> pixi</a> for easier datasets m
     curl -fsSL https://pixi.sh/install.sh | sh
 
 All commands work from this `.` directory.
-#### KITTI
-    TODO
+
 #### Matterport 3D
 
 Download `download_mp.py` script from <a href="https://niessner.github.io/Matterport/">Matterport3D website</a> and place it into `data_scripts/` direcroty.
@@ -64,6 +63,9 @@ Use the following commands to prepare the dataset:
 ###### Additional notes:
 More details about Matterport 3D dataset can be found <a href="https://github.com/vlmaps/vlmaps#generate-dataset">here</a> and [here](https://github.com/facebookresearch/habitat-sim/blob/main/DATASETS.md#matterport3d-mp3d-dataset).\
 habitat-sim installation problems: https://github.com/facebookresearch/habitat-sim/issues/2147
+
+#### KITTI
+    soon
 
 ## Mapping
 

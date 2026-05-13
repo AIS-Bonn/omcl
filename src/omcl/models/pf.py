@@ -46,7 +46,7 @@ def create_gaussian_particles(mean, std, N):
     return particles, weights
 
 
-def init_particles(pose, T_init, std, N): #TODO: change scipy to pypose
+def init_particles(pose, T_init, std, N):
     pose_cpu = pose.cpu()
     orientation = R.from_matrix(pose_cpu[:3,:3] @ T_init[:3, :3]).as_euler('xyz', degrees=False)
     particles2d, weights = create_gaussian_particles([pose_cpu[0,-1], pose_cpu[1,-1], orientation[-1]], std, N)
@@ -362,8 +362,6 @@ def run(scene_name, config, first_pose_id=0, device='cuda', viser_server=None, o
         
                 if len(rays_ids_batched) == 0:
                     continue  # no intersections are found -> zero weights
-                # TODO: description localizatoon:
-                # TODO:     3. choose lowest possible lost for every particle
                 estimate_loss(batches_mask, rays_ids_batched, rays_features, closest_rays_indx_batched, map_features_db_device, bs=config.rays_loss_batch_size, output_tensor=all_losses, output_slice=slice(st, end))
 
             weights = estimate_weights(weights, all_losses)

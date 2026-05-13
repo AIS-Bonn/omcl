@@ -247,12 +247,11 @@ def get_masks_features(input_data_mask, obs_features, encodings_device, classes_
     return rays_mask, rays_mask.cuda()
 
     
-def prepare_pf(first_pose_id, odoms, features_db, poses44, T_init, config, device, data_path):
+def prepare_pf(first_pose_id, odoms, poses44, T_init, config, device, data_path):
     i_prev = first_pose_id
 
     print('prepare data')
     odoms = odoms.to(device)
-    encodings_device = features_db.to(device)#.contiguous()
     pose = (T_init @ poses44[0]).detach().to(device)
     if i_prev > 0:
         pose = pose @ combine_odoms(odoms, 0, i_prev)
@@ -270,7 +269,7 @@ def prepare_pf(first_pose_id, odoms, features_db, poses44, T_init, config, devic
     aspect = config.simulate.resolution.w/config.simulate.resolution.h
     hfov = math.radians(config.simulate.hfov)
 
-    return i_prev, odoms, encodings_device, pose, particles, weights, scene_dir, aspect, hfov
+    return i_prev, odoms, pose, particles, weights, scene_dir, aspect, hfov
 
 def load_octree_map(points, points_labels, scene_name, config):
     print("Create octree map")
@@ -282,8 +281,12 @@ def load_octree_map(points, points_labels, scene_name, config):
 def run(scene_name, config, first_pose_id=0, device='cuda', viser_server=None, octree_map=None, batch_size=1000, inital_particles=None):
     torch.set_grad_enabled(False)
     print("loading the data")
-    data_path, points, points_labels, poses44, T_init, features_db, features_labels = load_data(scene_name, config)
-    classes_ids = torch.arange(0, features_db.shape[0])
+    (data_path, points, points_labels, poses44, T_init, 
+      map_features_db, rgb_features_db, vis_scene_features) = load_data(scene_name, config, device)
+    map_features_db_device = map_features_db.to(device)
+    rgb_features_db_device = rgb_features_db.to(device)
+    
+    classes_ids = torch.arange(0, rgb_features_db.shape[0])
     odoms = estimate_odoms(poses44, T_init)
 
     if octree_map is None:
@@ -302,27 +305,17 @@ def run(scene_name, config, first_pose_id=0, device='cuda', viser_server=None, o
 
     # visualization
     if viser_server is not None:
-        colors_map = copy(d3_40_colors_rgb)
-        if len(colors_map) <= points_labels.max():
-            colors_map =  np.concatenate([colors_map, generate_rgb_colors(points_labels.max() - len(colors_map) + 1)], axis=0)    
+        colors_map = np.concatenate([d3_40_colors_rgb, generate_rgb_colors(config.vis.num_colors)], axis=0)
         plot_data_points(points.cpu(), points_labels, colors_map, viser_server)
         plot_floor(scene_name, config, viser_server)
-        plot_map_nodes(point_hierarchy, spc_labels, pyramid, scene_name, scale, config, colors_map, viser_server, stride=2)
-
-        # if config.vis.plot_mesh_points:
-        #     _mesh_pts, _mesh_pts_labels, _, _ = load_mesh_pts(data_path)
-        #     _ = viser_server.scene.add_point_cloud(name="mesh_points",
-        #                                            points=np.array(_mesh_pts),
-        #                                            colors=colors_map[_mesh_pts_labels] / 255,
-        #                                            point_size=config.scene[scene_name].resolution,
-        #                                            visible=True)
+        # remap map colors to rgb_features_db  colors
+        plot_map_nodes(vis_scene_features, map_features_db, point_hierarchy, spc_labels, pyramid, scene_name, scale, config, colors_map, viser_server, stride=2)
     print("run")
 
-
-    i_prev, odoms, encodings_device, pose, particles, weights, scene_dir, aspect, hfov = prepare_pf(first_pose_id, odoms, features_db, poses44, T_init, config, device, data_path)    
+    i_prev, odoms, pose, particles, weights, scene_dir, aspect, hfov = prepare_pf(first_pose_id, odoms, poses44, T_init, config, device, data_path)    
     # rays can always be on GPU
     rays_o, rays_d, cam = create_rays(poses44[0].clone().detach().cuda(), config, T_init)
-    rays_origin_colors, _, _, _ = read_pf_data(scene_dir, 0, features_db, config)
+    rays_origin_colors, _, _, _ = read_pf_data(scene_dir, 0, rgb_features_db, config)
     _ = viser_server.scene.add_point_cloud(
         name="rays_origin",
         points=(rays_o + rays_d * 1.0).cpu().numpy(),
@@ -337,8 +330,8 @@ def run(scene_name, config, first_pose_id=0, device='cuda', viser_server=None, o
         particles = inital_particles.to(particles.device)
     with torch.no_grad():
         for i in trange(first_pose_id, len(os.listdir(scene_dir))//2):
-            rgb_image, obs_features, input_data_mask, _ = read_pf_data(scene_dir, i, features_db, config)
-            rays_mask_cpu, rays_mask, _features_masks_success = get_masks_features(input_data_mask, obs_features, encodings_device, classes_ids, device, config, num_samples=config.num_samples)
+            rgb_image, obs_features, input_data_mask, _ = read_pf_data(scene_dir, i, rgb_features_db, config)
+            rays_mask_cpu, rays_mask, _features_masks_success = get_masks_features(input_data_mask, obs_features, rgb_features_db_device, classes_ids, device, config, num_samples=config.num_samples)
             rays_features = obs_features.reshape(-1,512)[rays_mask_cpu].to(device)
             odom = combine_odoms(odoms, i_prev, i+1)
             i_prev = i+1
@@ -369,7 +362,7 @@ def run(scene_name, config, first_pose_id=0, device='cuda', viser_server=None, o
                     continue  # no intersections are found -> zero weights
                 # TODO: description localizatoon:
                 # TODO:     3. choose lowest possible lost for every particle
-                estimate_loss(batches_mask, rays_ids_batched, rays_features, closest_rays_indx_batched, encodings_device, bs=config.rays_loss_batch_size, output_tensor=all_losses, output_slice=slice(st, end))
+                estimate_loss(batches_mask, rays_ids_batched, rays_features, closest_rays_indx_batched, map_features_db_device, bs=config.rays_loss_batch_size, output_tensor=all_losses, output_slice=slice(st, end))
 
             weights = estimate_weights(weights, all_losses)
             mean_pose, p_rot33_mean = get_mean_pose(particles, weights)
@@ -396,41 +389,6 @@ def run(scene_name, config, first_pose_id=0, device='cuda', viser_server=None, o
             
             # visualize
             if viser_server is not None:
-                if config.vis.third_view:
-                    clients = viser_server.get_clients()
-                    demo_camera = clients[[*clients.keys()][0]]
-                    # sem_camera_pose = mean_pose.cpu()
-                    # sem_camera_pose = pose[:3, -1].cpu()
-                    demo_pose = pose[:3, -1].cpu()
-                    # Compute backward offset (local -Z axis)
-                    # In world space, it's the 3rd column of rotation matrix: R[:, 2]
-                    # backward_dir = p_rot33_mean[:, 2].cpu()  # Z (behind the object)
-                    backward_dir = pose[:3, :3][:, 2].cpu()  # Z (behind the object)
-                    # Add some distance behind (e.g., 1.0 meter)
-                    offset = .5 * backward_dir/backward_dir.norm(2)
-                    cam_pos = demo_pose + offset
-                    cam_pos[-1] += .5
-                    demo_camera.camera.position = cam_pos
-                    demo_camera.camera.wxyz = rot2viser_wxyz(pose[:3, :3].cpu() @ R.from_euler('x',-35, degrees=True).as_matrix())
-                    # image1 =  cv2.imread(os.path.join(str(Path(scene_dir).parent.absolute()), 'rgb', f"00000{i}"[-6:]+'.png'))
-                    # plot_semantic_camera(image1, rgb_image, sem_camera_pose, p_rot33_mean, [0,255,0], hfov, aspect, viser_server)
-                elif config.vis.bird_eye:
-                    clients = viser_server.get_clients()
-                    demo_camera = clients[[*clients.keys()][0]]
-                    cam_pos = mean_pose.cpu()
-                    # cam_pos = pose[:3, -1].cpu()
-                    cam_pos[-1] += 4.
-                    cam_pos[0] += 3.
-                    # cam_pos[-1] += 9.
-                    # cam_pos[1] = -1.8097718
-                    # cam_pos[0] -= 3.
-                    demo_camera.camera.position = cam_pos
-                    # print(demo_camera.camera.wxyz)
-                    demo_camera.camera.wxyz = [-0.22657784,  0.6614917,   0.67633161, -0.23166088]
-                    # demo_camera.camera.wxyz = [-0.15036819,  0.69277261, -0.68925605,  0.14960491]#[-0.18659808,  0.68764145, -0.67717324,  0.18375743]
-                    # quat_camera =  R.from_euler('z',35, degrees=True).as_quat()
-                    # demo_camera.camera.wxyz = (quat_camera[-1], *quat_camera[:-1])
-                                
                 if config.vis.plot_particles:
                     plot_paricles(particles, hfov, aspect, viser_server, stride=config.vis.particles_stride)
 
@@ -441,30 +399,16 @@ def run(scene_name, config, first_pose_id=0, device='cuda', viser_server=None, o
                         plot_camera_rgb(pose, rgb_image, hfov, aspect, viser_server)
                 
                 if config.vis.plot_estimated:
-                    plot_raycast_view(rays_o, rays_d, estimated, spc, point_hierarchy, spc_labels, scale, colors_map, viser_server, hfov, 
+                    plot_raycast_view(rays_o, rays_d, estimated, spc, point_hierarchy, spc_labels, scale, 
+                                      map_features_db, vis_scene_features,
+                                      colors_map, viser_server, hfov, 
                                       config.simulate.resolution.w, config.simulate.resolution.h, [0,0,255])
                         
-                    if config.vis.demo: # only green frame
+                    if config.vis.demo:
                         __estimated_semantic_pose = mean_pose
-                        if config.vis.third_view:
-                            __estimated_semantic_pose = demo_pose
                         image1 =  cv2.imread(os.path.join(str(Path(scene_dir).parent.absolute()), 'rgb', f"00000{i}"[-6:]+'.png'))
                         plot_semantic_camera(image1, rgb_image, __estimated_semantic_pose, pose[:3,:3], [0,255,0], hfov, aspect, viser_server)
                     else:
                         plot_camera_frame('mean_cam', mean_pose, p_rot33_mean, [0,255,0], hfov, aspect, viser_server)
-                        # _ = viser_server.scene.add_camera_frustum(name='mean_cam2', 
-                        #                                     fov=hfov, 
-                        #                                     aspect=aspect, 
-                        #                                     position=mean_pose.cpu(),
-                        #                                     scale=0.25,
-                        #                                     wxyz=mrot2viser_wxyz2(p_rot33_mean), # TODO: use mean here
-                        #                                     color=[0,0,255])
-                # if config.vis.save_render:
-                #     clients = viser_server.get_clients()
-                #     demo_camera = clients[[*clients.keys()][0]]
-                #     demo_render = demo_camera.get_render(height=1080, width=1920)
-                #     cv2.imwrite(os.path.join(render_save_dir, f"00000{i}"[-6:]+'.jpeg'), 
-                #                 cv2.cvtColor(demo_render, cv2.COLOR_RGB2BGR))
-
         
     return poses44, estimated_poses, octree_map, precision_steps

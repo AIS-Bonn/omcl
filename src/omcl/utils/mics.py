@@ -37,7 +37,7 @@ def kitti_load_poses_kitti(scene_name, config):
     return data_path, poses44, pose_init, rot_init
 
 
-def load_data(scene_name, config):
+def load_data(scene_name, config, device):
     # expected format of input data for omcl
     if config.dataset.name == 'semantic_kitti':
         data_path, poses44, T_init = kitti_load_poses_kitti(scene_name, config)
@@ -46,8 +46,11 @@ def load_data(scene_name, config):
     map_path = os.path.join(data_path, f"{config.visual_model.name}_octree_map.pt")
     print(f'LOADED MAP: {map_path}')
     octree_map = torch.load(map_path, weights_only=True)
+    map_features_db = octree_map['map_features']
+    rgb_features_db = octree_map['rgb_features']
     return (data_path, octree_map['points'].float(), octree_map['points_labels'], 
-            poses44, T_init, octree_map['features'], octree_map['labels'])
+            poses44, T_init, map_features_db, rgb_features_db, octree_map['vis_scene_features'].to(device))
+    
 
 
 def read_pf_data(scene_dir, i, features_db, config):

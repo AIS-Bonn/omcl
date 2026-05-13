@@ -10,7 +10,7 @@ from scipy.spatial.transform import Rotation as R
 import hydra
 from omegaconf import DictConfig
 import cv2
-from tools import make_intrinsics, depth2pc
+from tools import make_intrinsics, depth2pc, get_scene_features
 
 from omcl.utils.plot import mp3d_pose2viser_wxyz
 from omcl.utils.spatial import voxel_down_sample
@@ -31,7 +31,8 @@ def process_frames(viser_server: viser.ViserServer, scene_name: str, config: Dic
     scene_dir, poses44, T_init = mp3d_load_poses(scene_name, config)
     depth_dir = os.path.join(scene_dir, 'depth')
     rgb_dir = os.path.join(scene_dir, 'rgb')
-    sem_colors = d3_40_colors_rgb # for visualiztion
+    # for visualiztion
+    sem_colors = np.concatenate([d3_40_colors_rgb, generate_rgb_colors(config.vis.num_colors)], axis=0)
     assert os.path.exists(depth_dir), depth_dir
     depth_images = os.listdir(depth_dir)
     ids = sorted((depth_file[:-4] for depth_file in depth_images))
@@ -43,6 +44,8 @@ def process_frames(viser_server: viser.ViserServer, scene_name: str, config: Dic
     shutil.rmtree(save_dir, ignore_errors=True)
     os.makedirs(save_dir, exist_ok=True)
     
+    scene_features = get_scene_features(scene_dir, config).cuda() # for visualization
+    
     for _, id_str in enumerate(tqdm(ids, desc=scene_name)):
         rgb_image = cv2.cvtColor(cv2.imread(os.path.join(rgb_dir, f'{id_str}.png')), cv2.COLOR_BGR2RGB)
         image_features = lang_features_from_rgb(rgb_image).reshape(-1,512)
@@ -53,10 +56,9 @@ def process_frames(viser_server: viser.ViserServer, scene_name: str, config: Dic
         similarity_ids = get_similarity_ids(image_features, all_features_db).reshape(540, 540).cpu()
         torch.save(similarity_ids, os.path.join(save_dir, f'{id_str}.pt'))
             
-        # visualization        
-        if len(sem_colors) < len(all_features_db):
-            sem_colors = np.concatenate([sem_colors, generate_rgb_colors((len(all_features_db) - len(sem_colors))*10)], axis=0)
-        sem_img = sem_colors[similarity_ids]
+        # visualization 
+        vis_ids = get_similarity_ids(all_features_db[similarity_ids.flatten()], scene_features).reshape(540, 540).cpu()
+        sem_img = sem_colors[vis_ids]
         cv2.imwrite(os.path.join(save_dir, f'{id_str}.png'), cv2.cvtColor(sem_img, cv2.COLOR_BGR2RGB))
         depth_img = np.load(os.path.join(depth_dir, f'{id_str}.npy'))
 
@@ -73,7 +75,9 @@ def process_frames(viser_server: viser.ViserServer, scene_name: str, config: Dic
     print(f"saving features database to {scene_dir}")
     features_labels = [*range(len(all_features_db))]
     torch.save({'features': all_features_db.cpu(),
-                'labels': features_labels},
+                'labels': features_labels,
+                'scene_features': scene_features.cpu() # for visualization
+                },
                os.path.join(scene_dir, f"{config.visual_model.name}_features_db.pt"))
     print("Done!")
 

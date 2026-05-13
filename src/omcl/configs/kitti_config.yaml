@@ -6,7 +6,6 @@ defaults:
   - visual_model: lseg  #open_scene
   - _self_
 
-use_gt: True
 num_particles: 512  # 1024
 std_t: 0.1
 std_rot: 0.1

@@ -49,22 +49,36 @@ More details about Matterport 3D dataset can be found <a href="https://github.co
 habitat-sim installation problems: https://github.com/facebookresearch/habitat-sim/issues/2147
 
 ## Mapping
-    ./docker/run.sh
 
 Extract Language Features (for mapping with Option 1 and Localization)
 
+    ./docker/run.sh
     python3 data_scripts/matterport/extract_lang_features.py
 
 Create Octree Language Map: 
 
 #### (Option 1) from RGB-D images:
+
+    ./docker/run.sh
     python3 data_scripts/matterport/create_map.py
 
 #### (Option 2) from point cloud:
+
+    ./docker/run.sh
     python3 data_scripts/matterport/create_map.py visual_model=open_scene
 
 
 ## Localization
 
+Visualization is available at <a href="http://0.0.0.0:8080/">http://0.0.0.0:8080</a>
+
+Matterport3D + LSeg:
+
+    ./docker/run.sh
+    python3 omcl/examples/localize_mp3d.py 
 
 
+Matterport3D + OpenScene:
+
+    ./docker/run.sh
+    python3 omcl/examples/localize_mp3d.py visual_model=open_scene

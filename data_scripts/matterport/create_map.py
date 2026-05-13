@@ -23,15 +23,18 @@ from omcl.models.processing import get_unique_features
 
 def get_map_dict_features(data_path, config, device):
     if config.visual_model.name == 'open_scene':
-        # initialize empty features database
-        features_db = torch.tensor([]).cuda()
-        features_labels = [*range(len(features_db))]
+        # OpenScene does not use rgb images for prediction
+        # However, the downstream localization employs LSeg predictions for OpenScene maps
+        # get_map_dict_features allows to unify the code for both cases
+        model_name = 'lseg'
     else:
-        # use features database extracted on previous step
-        features_data = torch.load(os.path.join(data_path, f"{config.visual_model.name}_features_db.pt"), weights_only=True)
-        features_db = features_data['features']
-        features_labels = features_data['labels']
-    return features_db.to(device), features_labels
+        model_name = config.visual_model.name
+    # use features database extracted on previous step
+    features_data = torch.load(os.path.join(data_path, f"{model_name}_features_db.pt"), weights_only=True)
+    rgb_features_db = features_data['features'] # not used with OpenScene
+    rgb_features_labels = features_data['labels'] # not used with OpenScene
+    scene_features = features_data['scene_features'] # for visualization only
+    return rgb_features_db.to(device), rgb_features_labels, scene_features.to(device)
 
 
 def generate_gt(viser_server: viser.ViserServer, scene_name: str, config: DictConfig, submap_size=500):
@@ -60,8 +63,9 @@ def generate_gt(viser_server: viser.ViserServer, scene_name: str, config: DictCo
     # initial states
     pose = T_init @ poses44[0]
     i_prev = 0
-    features_db, labels_db = get_map_dict_features(scene_dir, config, device)
-    sem_colors = d3_40_colors_rgb # for visualiztion
+    rgb_features_db, rgb_labels_db, vis_scene_features = get_map_dict_features(scene_dir, config, device)
+    # for visualiztion
+    sem_colors = np.concatenate([d3_40_colors_rgb, generate_rgb_colors(config.vis.num_colors)], axis=0)
     last_data_id = len(ids) - 1
     for seq_num, id_str in enumerate(tqdm(ids, desc=scene_name)):
         i = int(id_str) + 1
@@ -77,7 +81,7 @@ def generate_gt(viser_server: viser.ViserServer, scene_name: str, config: DictCo
             xyz_features = None
         else:
             obs_data = torch.load(os.path.join(semantic_dir, f'{id_str}.pt'))
-            features_img = features_db[obs_data]
+            features_img = rgb_features_db[obs_data]
             xyz_features = features_img[depth_mask][crop_mask].to(device)
         xyz = (pose_dev[:3, :3] @ torch.from_numpy(xyz).to(device) + pose_dev[:3, -1][..., None]).T
         # mapping
@@ -90,9 +94,7 @@ def generate_gt(viser_server: viser.ViserServer, scene_name: str, config: DictCo
             submaps.append((map_points.cpu(), map_features.cpu(), map_n_means.cpu()))
             # visualization
             if not PREDICT_ON_POINTS:
-                if len(sem_colors) < len(features_db):
-                    sem_colors = np.concatenate([sem_colors, generate_rgb_colors((len(features_db) - len(sem_colors))*10)], axis=0)
-                colors = sem_colors[(map_features @ features_db.T).cpu().argmax(-1)]
+                colors = sem_colors[(map_features @ rgb_features_db.T).cpu().argmax(-1)]
                 viser_server.add_point_cloud(name="submap", points=submaps[-1][0].numpy(), colors=colors, point_size=config.scene[scene_name].resolution)
             else:
                 viser_server.add_point_cloud(name="submap", points=submaps[-1][0].numpy(), colors=np.ones((len(submaps[-1][0]), 3))* 0.5, point_size=config.scene[scene_name].resolution)
@@ -108,21 +110,27 @@ def generate_gt(viser_server: viser.ViserServer, scene_name: str, config: DictCo
         map_features = model.forward(map_points, voxel_size=0.02).cuda()    # https://github.com/pengsongyou/openscene/blob/main/config/matterport/mink.yaml
         print(map_points.shape)
         print(map_features.shape)
-        features_db = get_unique_features([], map_features, similarity_threshold=0.05, mean=True)
-        labels_db = [*range(len(features_db))]
-        print(f"New features_db size: {features_db.shape}")
-    idx = (map_features.cuda() @ features_db.T.cuda()).cpu().argmax(-1)
-    if len(sem_colors) < len(features_db):
-        sem_colors = np.concatenate([sem_colors, generate_rgb_colors((len(features_db) - len(sem_colors))*10)], axis=0)  
-    viser_server.add_point_cloud(name="map", points=map_points.cpu().numpy(), colors=sem_colors[idx], point_size=config.scene[scene_name].resolution)
+        # compress the features
+        map_features_db = get_unique_features([], map_features, similarity_threshold=0.05, mean=True)
+        map_labels_db = [*range(len(map_features_db))]
+        print(f"New features_db size: {map_features_db.shape}")
+    else:
+        map_features_db = rgb_features_db
+        map_labels_db = rgb_labels_db
+    idx = (map_features.cuda() @ map_features_db.T.cuda()).cpu().argmax(-1)
+    
+    vis_ids = (map_features_db[idx].cuda() @ vis_scene_features.T).argmax(-1).cpu()
+    viser_server.add_point_cloud(name="map", points=map_points[::2].cpu().numpy(), colors=sem_colors[vis_ids][::2], point_size=config.scene[scene_name].resolution)
 
     torch.save({'points': map_points, 
                 'points_labels': idx,
-                'features': features_db,
-                'labels': labels_db}, 
+                'map_features': map_features_db,
+                'map_labels': map_labels_db,
+                'rgb_features': rgb_features_db,
+                'rgb_labels': rgb_labels_db,
+                'vis_scene_features': vis_scene_features.cpu()}, 
                 os.path.join(scene_dir, f"{config.visual_model.name}_octree_map.pt"))
-
-
+    
 @hydra.main(
     version_base=None,
     config_path="../../omcl/configs",

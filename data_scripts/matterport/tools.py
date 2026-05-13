@@ -1,4 +1,8 @@
 import numpy as np
+import torch
+import clip
+import os
+import yaml
 
 
 def get_sim_cam_mat_with_fov(h, w, fov):
@@ -47,3 +51,39 @@ def depth2pc(depth_img, intrinsics, min_depth=0.1, max_depth=10):
     xy_c0 = np.matmul(intrinsics['inv_K'], xys)
     assert np.all(xy_c0[-1, :] == 1)    # just check the values
     return xy_c0[:3, :].astype(np.float32), depth_mask  #TODO: is float 32 enough for kaolin coordinates?
+
+
+
+def encode_text(encoder, text_list, device='cuda'):
+    text = clip.tokenize(text_list)  
+    text = text.to(device)
+    text_features = encoder.encode_text(text).half()
+    text_features = text_features / text_features.norm(dim=-1, keepdim=True) 
+    return text_features
+
+
+def get_scene_labels(scene_dir, config):
+    with open(os.path.join(scene_dir, 'classes_map.yaml'), 'r') as classes_file:
+        classes_map = yaml.safe_load(classes_file)
+    labels = []
+    ids = []
+    ids2labels = {}
+    for id, label in classes_map.values():
+        if label == "" or id == config.simulate.ignore_indx:
+            continue
+        if id not in ids:
+            ids.append(id)
+            labels.append(label)
+            ids2labels[id] = label
+    sorted_indexes = np.argsort(ids)
+    labels_ids = np.array(ids)[sorted_indexes]
+    labels = [labels[i] for i in sorted_indexes]
+    return labels, labels_ids, ids2labels
+
+def get_scene_features(scene_dir, config):
+    # used for visualization to colorize semantic
+    labels, _, _ = get_scene_labels(scene_dir, config)
+    with torch.no_grad():
+        text_encoder, _ = clip.load("ViT-B/32", device='cpu', jit=False)
+        labels_features = encode_text(text_encoder, labels, 'cpu')
+    return labels_features

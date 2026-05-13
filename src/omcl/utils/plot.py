@@ -68,16 +68,18 @@ def plot_camera_frame(name, position, rot33, color, hfov, aspect, viser_server, 
                                               color=color)
 
 
-def plot_map_nodes(point_hierarchy, spc_labels, pyramid, scene_name, scale, config, d3_40_colors_rgb, viser_server, stride=1):
+def plot_map_nodes(vis_features, map_features_db, point_hierarchy, spc_labels, pyramid, scene_name, scale, config, d3_40_colors_rgb, viser_server, stride=1):
     num_nodes = 2**config.scene[scene_name].max_level
     node_size = 2/num_nodes
     gpts = -1. + (point_hierarchy.cpu()[pyramid[1, -2]:pyramid[1, -1]])  * node_size + 0.5*node_size
+    vis_ids = (map_features_db[spc_labels].cuda() @ vis_features.T).argmax(-1).cpu()
+    
     if stride > 1:
         points = gpts[::stride].cpu().numpy()*scale
-        colors = d3_40_colors_rgb[spc_labels[::stride].int()] / 255
+        colors = d3_40_colors_rgb[vis_ids[::stride].int()] / 255
     else:
         points = gpts.cpu().numpy()*scale
-        colors = d3_40_colors_rgb[spc_labels.int()] / 255
+        colors = d3_40_colors_rgb[vis_ids.int()] / 255
     _ = viser_server.scene.add_point_cloud(
         name="map_nodes",
         points=points,
@@ -119,7 +121,8 @@ def raycast_view(rays_o,
                  point_hierarchy, 
                  spc_labels, 
                  scale,
-                 colors_map):
+                 colors_map,
+                 map_features, vis_features):
     
     rays_o_pose_batched, rays_d_pose_batched = transform_rays_batched(rays_o, rays_d, particle[None])
     closest_rays_indx_batched, _, rays_ids_batched, batches_mask = ray_trace_pose_batched(rays_o_pose_batched / scale, 
@@ -127,7 +130,9 @@ def raycast_view(rays_o,
                                                                         spc, 
                                                                         point_hierarchy, 
                                                                         spc_labels)
-    return colors_map[rays_ids_batched], batches_mask[0], rays_o_pose_batched, rays_d_pose_batched
+    vis_ids = (map_features[rays_ids_batched].cuda() @ vis_features.T).argmax(-1).cpu()
+    
+    return colors_map[vis_ids], batches_mask[0], rays_o_pose_batched, rays_d_pose_batched
 
 def plot_raycast_view(rays_o, 
                  rays_d, 
@@ -136,12 +141,14 @@ def plot_raycast_view(rays_o,
                  point_hierarchy, 
                  spc_labels, 
                  scale,
+                 map_features, vis_features,
                  colors_map,
                  viser_server, 
                  hfov,
                  width, height, color):
     with torch.no_grad():
-        rays_colors, image_mask, rays_o_pose_batched, rays_d_pose_batched = raycast_view(rays_o, rays_d, particle, spc, point_hierarchy, spc_labels, scale, colors_map)
+        rays_colors, image_mask, rays_o_pose_batched, rays_d_pose_batched = raycast_view(rays_o, rays_d, particle, spc, point_hierarchy, spc_labels, scale, colors_map,
+                                                                                         map_features, vis_features)
         rays_image = np.zeros((image_mask.shape[0], 3))
         rays_image[image_mask.cpu()] = rays_colors
         aspect = width/height

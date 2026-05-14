@@ -61,48 +61,26 @@ def init_particles(pose, T_init, std, N):
     return particles.to(pose.device), weights.double().to(pose.device)
 
 
+def predict(particles, odom, config):
+    device = particles.device
+    dtype = particles.dtype
+    N = len(particles)
 
-angle_diff = torch.pi / 180 * 30
-trans_diff = 1
-num_variants = 100
-rot_perturbes = torch.zeros(num_variants, 3)
-rot_perturbes[:, 1] = torch.linspace(-angle_diff, angle_diff, num_variants)
-rot_perturbes[:3]
-rot_perturbes_mat44 = torch.zeros(num_variants, 4,4)
-rot_perturbes_mat44[:,-1,-1] = 1
-for i, rp in enumerate(rot_perturbes):
-    rot_perturbes_mat44[i, :3, :3] = torch.tensor(R.from_euler('xyz', rp, degrees=False).as_matrix()) 
-trans_pertrube = torch.linspace(-trans_diff, trans_diff, 100) 
+    phi = torch.randn(N, 3, device=device, dtype=dtype)
+    phi[:, 0] *= config.odom.rot_x_std
+    phi[:, 1] *= config.odom.rot_y_std
+    phi[:, 2] *= config.odom.rot_z_std
+    angle = torch.linalg.norm(phi, dim=-1, keepdim=True).clamp_min(1e-12)
+    axis = phi / angle
+    dR =kal.math.quat.rot33_from_angle_axis(angle=angle, axis=axis)
+    
+    n_odom = odom[None].repeat(len(particles), 1, 1).clone()
+    n_odom[:, :3, :3] = n_odom[:, :3, :3]  @ dR
+    n_odom[:, 0, -1] += torch.randn(N, device=device, dtype=dtype)  * config.odom.x_std
+    n_odom[:, 1, -1] += torch.randn(N, device=device, dtype=dtype)  * config.odom.y_std
+    n_odom[:, 2, -1] += torch.randn(N, device=device, dtype=dtype)  * config.odom.z_std
 
-perturbations_mat44 = rot_perturbes_mat44.clone()[torch.randperm(num_variants)]
-perturbations_mat44[:,0,-1] = trans_pertrube.clone()[torch.randperm(num_variants)]
-perturbations_mat44[:,2,-1] = trans_pertrube.clone()[torch.randperm(num_variants)]
-
-def predict_predefined(particles, odom, std_t, std_rot):
-    """ move according to control input u (heading change, velocity)
-    with noise Q (std heading change, std velocity)`"""
-    delta_R = rot_perturbes_mat44[torch.randint(0,len(rot_perturbes_mat44), (len(particles),))]
-    particles = particles @ delta_R
-    moved = particles @ odom[None]
-    # moved[:, :2, -1] += torch.randn(len(particles), 2)  * std_t
-    return moved
-
-def predict(particles, odom, std_t, std_rot, config):
-    """ move according to control input u (heading change, velocity)
-    with noise Q (std heading change, std velocity)`"""
-    delta_R = torch.randn(len(particles), device=particles.device, dtype=particles.dtype)  * std_rot
-    delta_R %= 2 * torch.pi
-    _axis = torch.zeros(len(particles), 3, device=particles.device, dtype=particles.dtype)
-    _axis[:, 1] = 1
-    delta_R = kal.math.quat.rot33_from_angle_axis(angle=delta_R[..., None], axis=_axis)
-
-    particles[:, :3,:3] = particles[:, :3,:3] @ delta_R
-    moved = particles @ odom[None]
-    if config.in_3D:
-        moved[:, :3, -1] += torch.randn(len(particles), 3, device=particles.device, dtype=particles.dtype)  * std_t
-    else:
-        moved[:, :2, -1] += torch.randn(len(particles), 2, device=particles.device, dtype=particles.dtype)  * std_t
-    return moved
+    return particles @ n_odom
 
     
 def update(particles, weights, z, R, landmarks):
@@ -338,7 +316,7 @@ def run(scene_name, config, first_pose_id=0, device='cuda', viser_server=None, o
             odom = combine_odoms(odoms, i_prev, i+1)
             i_prev = i+1
             pose = pose @ odom
-            particles = predict(particles, odom, std_t=config.std_t, std_rot=config.std_rot, config=config)
+            particles = predict(particles, odom, config=config)
 
             if not _features_masks_success: # only prediction step if no features are found
                 print(f"Corrupted features/masks for frame {i}, skip it")

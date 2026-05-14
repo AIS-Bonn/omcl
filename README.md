@@ -101,3 +101,5 @@ Matterport3D + OpenScene:
 
     ./docker/run.sh
     python3 omcl/examples/localize_mp3d.py visual_model=open_scene
+
+![](media/mp3d_demo.gif)

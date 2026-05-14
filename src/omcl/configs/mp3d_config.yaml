@@ -9,8 +9,6 @@ paths:
 semantic_grounding: True
 
 num_particles: 1024  # 256 1024
-std_t: 0.1
-std_rot: 0.1
 num_samples: 1024  # 4096 1024
 in_3D: False
 
@@ -21,6 +19,14 @@ sampling: 'default'
 
 init_std_x: 0.3
 init_std_y: 0.3
+
+odom:
+    rot_x_std: 0.0
+    rot_y_std: 0.1
+    rot_z_std: 0.0
+    x_std: 0.1
+    y_std: 0.0
+    z_std: 0.1
 
 global_localization:
     active: False

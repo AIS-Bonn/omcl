@@ -31,15 +31,21 @@ def euclidean_inverse(x: Tensor) -> Tensor:
 
 
 def get_mean_pose(particles, weights):
-    mean_pose = (particles[:, :3, -1]*weights[..., None]).sum(0)
-    
-    # p_angles, p_axis = kal.math.quat.angle_axis_from_rot33(particles[..., :3, :3])
-    # mean_rot_vec = ((p_angles * p_axis)*weights[..., None]).sum(0)
-    # mean_angle = mean_rot_vec.norm(closest_rays_indx_batched.shape)
-    # mean_axis = mean_rot_vec / mean_angle 
-    # print(mean_angle, mean_axis)
-    # p_rot33_mean = kal.math.quat.rot33_from_angle_axis(mean_angle, mean_axis)[0]
-    p_quats = kal.math.quat.quat_from_rot33(particles[..., :3, :3])
-    mean_p_quat = kal.math.quat.quat_unit_positive((p_quats * weights[..., None]).sum(0))
-    p_rot33_mean = kal.math.quat.rot33_from_quat(mean_p_quat)
-    return mean_pose, p_rot33_mean
+    mean_t = (particles[:, :3, -1] * weights[:, None]).sum(dim=0)
+
+    q = kal.math.quat.quat_from_rot33(particles[:, :3, :3])   # [N,4]
+
+    q = q.clone()
+    ref = q[0]
+    signs = torch.sign((q * ref[None]).sum(dim=-1, keepdim=True))
+    signs[signs == 0] = 1.0
+    q = q * signs
+
+    A = (weights[:, None, None] * (q[:, :, None] @ q[:, None, :])).sum(dim=0)
+    eigvals, eigvecs = torch.linalg.eigh(A)
+    q_mean = eigvecs[:, -1]
+    q_mean = q_mean / torch.linalg.norm(q_mean)
+    q_mean = kal.math.quat.quat_unit_positive(q_mean[None])[0]
+
+    R_mean = kal.math.quat.rot33_from_quat(q_mean[None])[0]
+    return mean_t, R_mean

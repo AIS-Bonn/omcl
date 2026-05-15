@@ -67,6 +67,7 @@ habitat-sim installation problems: https://github.com/facebookresearch/habitat-s
 #### KITTI
     soon
 
+# Matterport 3D
 ## Mapping
 
 Extract Language Features (for mapping with Option 1 and Localization)
@@ -103,3 +104,12 @@ Matterport3D + OpenScene:
     python3 omcl/examples/localize_mp3d.py visual_model=open_scene
 
 ![](media/mp3d_demo.gif)
+
+## Prompt-augmented Initialization (Global Localization)
+    soon
+
+# KITTI
+## Mapping
+    soon
+## Localization
+    soon

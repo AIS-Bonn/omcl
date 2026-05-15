@@ -6,11 +6,10 @@ defaults:
 paths:
     all_data: 'data'
 
-semantic_grounding: True
+semantic_grounding: False
 
 num_particles: 1024  # 256 1024
 num_samples: 1024  # 4096 1024
-in_3D: False
 
 particles_batch_size: 128 # 32, 256
 rays_loss_batch_size: 16  # 10
@@ -39,4 +38,4 @@ vis:
     plot_estimated: True
     plot_particles: True
     particles_stride: 32
-    num_colors: 200
+    num_colors: 500

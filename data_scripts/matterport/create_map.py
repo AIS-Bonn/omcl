@@ -108,13 +108,14 @@ def generate_gt(viser_server: viser.ViserServer, scene_name: str, config: DictCo
     # breakpoint()
     if PREDICT_ON_POINTS:
         print('Features prediction on map points')
-        map_features = model.forward(map_points, voxel_size=0.02).cuda()    # https://github.com/pengsongyou/openscene/blob/main/config/matterport/mink.yaml
-        print(map_points.shape)
-        print(map_features.shape)
-        # compress the features
-        map_features_db = get_unique_features([], map_features, similarity_threshold=0.05, mean=True)
-        map_labels_db = [*range(len(map_features_db))]
-        print(f"New features_db size: {map_features_db.shape}")
+        with torch.no_grad():
+            map_features = model.forward(map_points, voxel_size=0.02).cuda()    # https://github.com/pengsongyou/openscene/blob/main/config/matterport/mink.yaml
+            print(map_points.shape)
+            print(map_features.shape)
+            # compress the features
+            map_features_db = get_unique_features([], map_features, similarity_threshold=0.05, mean=True)
+            map_labels_db = [*range(len(map_features_db))]
+            print(f"New features_db size: {map_features_db.shape}")
     else:
         map_features_db = rgb_features_db
         map_labels_db = rgb_labels_db

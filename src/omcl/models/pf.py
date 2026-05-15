@@ -260,6 +260,17 @@ def run(scene_name, config, first_pose_id=0, device='cuda', viser_server=None, o
     scene_config = config.dataset.scenes_config[scene_name]
     (data_path, points, points_labels, poses44, T_init, 
       map_features_db, rgb_features_db, vis_scene_features) = load_data(scene_name, config, device)
+    
+    if config.semantic_grounding:
+        # Semantic Grounding remaps automatically extracted features to the user prompt features.
+        # For simplicity, we demonstrate this using scene labels as the user prompt.
+        # vis_scene_features was created from the scene labels, and its direct clone saves resources.
+        # https://github.com/AIS-Bonn/omcl/blob/4483b9ae098f79a5631b04802258d6b62120a4a0/data_scripts/matterport/tools.py#L83
+        user_prompt_features = vis_scene_features.clone().detach()  # get features from the user prompt (e.g., scene labels)
+        remap_ids = (map_features_db @ user_prompt_features.T).argmax(-1).cpu()
+        map_features_db = user_prompt_features.clone().detach()
+        points_labels = remap_ids[points_labels]
+    
     map_features_db_device = map_features_db.to(device)
     rgb_features_db_device = rgb_features_db.to(device)
     

@@ -23,7 +23,10 @@ By grounding pose estimation in language features, <b>OMCL</b> accelerates globa
 </div>
 
 ## Approach
-![](media/pipeline.jpg)
+<!-- <img src="media/omcl_abstract.jpg" height="200"/>
+<img src="media/pipeline.jpg" height="200"/> -->
+<p><img src="media/omcl_abstract.jpg" width="34.7%"/> <img src="media/pipeline.jpg" width="60%"/></p>
+
 
 ## Installation 
 Build Docker image: 

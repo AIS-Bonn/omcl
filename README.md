@@ -120,3 +120,30 @@ Press Enter to interact with the visualization.
     soon
 ## Localization
     soon
+
+
+# Citation
+
+If you use OMCL in an academic work, please cite:
+
+```bibtex
+@article{kruzhkov2026omcl,
+  title={OMCL: Open-vocabulary Monte Carlo Localization},
+  author={Kruzhkov, Evgenii and Memmesheimer, Raphael and Behnke, Sven},
+  journal={IEEE Robotics and Automation Letters (RA-L)},
+  volume={11},
+  number={3},
+  pages={2698--2705},
+  year={2026},
+  codeurl={https://github.com/AIS-Bonn/omcl},
+}
+
+@inproceedings{kruzhkov2025lilmaps,
+  title={LiLMaps: Learnable Implicit Language Maps},
+  author={Kruzhkov, Evgenii and Behnke, Sven},
+  booktitle={2025 IEEE/CVF Winter Conference on Applications of Computer Vision (WACV)},
+  year={2025},
+  organization={IEEE}
+}
+
+```

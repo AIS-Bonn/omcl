@@ -68,7 +68,7 @@ def plot_camera_frame(name, position, rot33, color, hfov, aspect, viser_server, 
                                               color=color)
 
 
-def plot_map_nodes(vis_features, map_features_db, point_hierarchy, spc_labels, pyramid, scale, scene_config, d3_40_colors_rgb, viser_server, stride=1):
+def plot_map_nodes(vis_features, map_features_db, point_hierarchy, spc_labels, pyramid, scale, scene_config, d3_40_colors_rgb, viser_server, stride=1, visible=False):
     num_nodes = 2**scene_config.max_level
     node_size = 2/num_nodes
     gpts = -1. + (point_hierarchy.cpu()[pyramid[1, -2]:pyramid[1, -1]])  * node_size + 0.5*node_size
@@ -85,7 +85,7 @@ def plot_map_nodes(vis_features, map_features_db, point_hierarchy, spc_labels, p
         points=points,
         colors=colors,
         point_size=scene_config.resolution,
-        visible=False)
+        visible=visible)
     
     
 def plot_data_points(points, points_labels, d3_40_colors_rgb, viser_server):
@@ -171,3 +171,13 @@ def plot_raycast_view(rays_o,
             colors=colors,
             point_size=0.02,
             visible=False)
+        
+        
+def printRed(s): print("\033[91m {}\033[00m".format(s))
+def printGreen(s): print("\033[92m {}\033[00m".format(s))
+def printYellow(s): print("\033[93m {}\033[00m".format(s))
+def printLightPurple(s): print("\033[94m {}\033[00m".format(s))
+def printPurple(s): print("\033[95m {}\033[00m".format(s))
+def printCyan(s): print("\033[96m {}\033[00m".format(s))
+def printLightGray(s): print("\033[97m {}\033[00m".format(s))
+def printBlack(s): print("\033[90m {}\033[00m".format(s))  # Corrected from 98 to 90 (standard ANSI)

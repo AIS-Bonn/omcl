@@ -28,7 +28,6 @@ odom:
     z_std: 0.1
 
 global_localization:
-    active: False
     distances: [2., 1., 0.5, 0.2, 0.1]
 
 vis:

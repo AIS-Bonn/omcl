@@ -61,6 +61,17 @@ def init_particles(pose, T_init, std, N):
     return particles.to(pose.device), weights.double().to(pose.device)
 
 
+# def get_random_rot(rot_x_std, rot_y_std, rot_z_std, device, dtype):
+#     phi = torch.randn(1, 3, device=device, dtype=dtype)
+#     phi[:, 0] *= rot_x_std
+#     phi[:, 1] *= rot_y_std
+#     phi[:, 2] *= rot_z_std
+#     angle = torch.linalg.norm(phi, dim=-1, keepdim=True).clamp_min(1e-12)
+#     axis = phi / angle
+#     dR =kal.math.quat.rot33_from_angle_axis(angle=angle, axis=axis)
+#     return dR
+
+    
 def predict(particles, odom, config):
     device = particles.device
     dtype = particles.dtype
@@ -154,9 +165,9 @@ def torch_stratified_resample(weights):
 
 
 def estimate_weights(weights, batches_loss):
-    weights = weights * batches_loss + 1.e-5
+    weights = weights * batches_loss
     # weights[batches_mask.any(-1).logical_not()] = 1.e-5
-    weights /= weights.sum()
+    weights /= (weights.sum() + 1.e-9)
     return weights
 
 
@@ -254,7 +265,7 @@ def load_octree_map(points, points_labels, scene_name, config):
                                                     config.scene[scene_name].resolution)
     return (spc, spc_labels, scale)
         
-def run(scene_name, config, first_pose_id=0, device='cuda', viser_server=None, octree_map=None, batch_size=1000, inital_particles=None):
+def run(scene_name, config, first_pose_id=0, device='cuda', viser_server=None, octree_map=None, batch_size=1000, inital_particles=None, global_localization=False, plot_map=True):
     torch.set_grad_enabled(False)
     print("loading the data")
     scene_config = config.dataset.scenes_config[scene_name]
@@ -297,7 +308,7 @@ def run(scene_name, config, first_pose_id=0, device='cuda', viser_server=None, o
         plot_data_points(points.cpu(), points_labels, colors_map, viser_server)
         plot_floor(scene_name, config, viser_server)
         # remap map colors to rgb_features_db  colors
-        plot_map_nodes(vis_scene_features, map_features_db, point_hierarchy, spc_labels, pyramid, scale, scene_config, colors_map, viser_server, stride=2)
+        plot_map_nodes(vis_scene_features, map_features_db, point_hierarchy, spc_labels, pyramid, scale, scene_config, colors_map, viser_server, stride=2, visible=plot_map)
     print("run")
 
     i_prev, odoms, pose, particles, weights, scene_dir, aspect, hfov = prepare_pf(first_pose_id, odoms, poses44, T_init, config, device, data_path)    
@@ -366,7 +377,7 @@ def run(scene_name, config, first_pose_id=0, device='cuda', viser_server=None, o
             estimated[:3, -1] = mean_pose
             estimated_poses.append(estimated.cpu().numpy())
             
-            if config.global_localization.active:
+            if global_localization:
                 distance = np.linalg.norm(mean_pose.cpu().numpy() - pose[:3, -1].cpu().numpy())
                 for precision_idx in range(len(precision_steps)):
                     if (distance <= config.global_localization.distances[precision_idx]) and (precision_steps[precision_idx] == 0):

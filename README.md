@@ -106,7 +106,14 @@ Matterport3D + OpenScene:
 ![](media/mp3d_demo.gif)
 
 ## Prompt-augmented Initialization (Global Localization)
-    soon
+
+
+    python3 omcl/examples/global_localization.py 
+
+Press Enter to interact with the visualization.
+
+![](media/global_loc.gif)
+
 
 # KITTI
 ## Mapping

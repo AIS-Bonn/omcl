@@ -25,7 +25,7 @@ By grounding pose estimation in language features, <b>OMCL</b> accelerates globa
 ## Approach
 <!-- <img src="media/omcl_abstract.jpg" height="200"/>
 <img src="media/pipeline.jpg" height="200"/> -->
-<p><img src="media/omcl_abstract.jpg" width="34.7%"/> <img src="media/pipeline.jpg" width="60%"/></p>
+<p><img src="media/omcl_abstract.jpg" width="35.9%"/> <img src="media/pipeline.jpg" width="62%"/></p>
 
 
 ## Installation 

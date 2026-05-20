@@ -31,12 +31,15 @@ habitat-sim installation problems: https://github.com/facebookresearch/habitat-s
 
 ## SemanticKITTI
 * Download KITTI Odometry benchmark [color data 65 GB](https://www.cvlibs.net/datasets/kitti/eval_odometry.php)
+* Download KITTI Odometry benchmark [velodyne laser data 80 GB](https://www.cvlibs.net/datasets/kitti/eval_odometry.php)
+* Download SemanticKITTI [label data 179 MB](https://semantic-kitti.org/dataset.html#download). It contains poses.txt as well.
 * Place all donwloaded files into the `~/data` folder:
 
         ~ # user home directory ~
         ├── data
         │   ├── data_odometry_color.zip
-        │   ├── ...
+        │   ├── data_odometry_velodyne.zip
+        │   ├── data_odometry_labels.zip
         │   ├── ...
 
 <p></p>

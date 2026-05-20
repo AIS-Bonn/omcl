@@ -1,6 +1,3 @@
-# Creates MAP from GT semantic information
-
-
 import numpy as np
 import os
 from tqdm.auto import tqdm

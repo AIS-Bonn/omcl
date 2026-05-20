@@ -130,7 +130,9 @@ wget https://cvg-data.inf.ethz.ch/openscene/models/matterport_lseg.pth.tar \
 [tasks.unzip_sem_kitti]
 cmd = """
 mkdir -p ~/data/semantic_kitti \
-&& unzip ~/data/data_odometry_color.zip -d ~/data/semantic_kitti
+&& unzip ~/data/data_odometry_color.zip -d ~/data/semantic_kitti \
+&& unzip ~/data/data_odometry_velodyne.zip -d ~/data/semantic_kitti \
+&& unzip ~/data/data_odometry_labels.zip -d ~/data/semantic_kitti
 """
 [tasks.download_xdecoder]
 cmd = """

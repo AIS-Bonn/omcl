@@ -28,10 +28,60 @@ gdown = "*"
 opencv-python-headless = "*"
 hydra-core = "*"
 
+[feature.xdecoder.dependencies]
+python = "3.10.*"
+pip = "*"
+git = "*"
+cmake = "*"
+ninja = "*"
+setuptools = "<82"
+wheel = "*"
+pkg-config = "*"
+ffmpeg = "*"
+mpi4py = "*"
+
+[feature.xdecoder.pypi-dependencies]
+torch = "==2.1.0"
+torchvision = "==0.16.0"
+pillow = "==9.4.0"
+opencv-python = "==4.8.1.78"
+pyyaml = "*"
+json_tricks = "*"
+yacs = "*"
+scikit-learn = "*"
+pandas = "*"
+timm = "*"
+numpy = "==1.23.1"
+fvcore = "==0.1.5.post20221221"
+transformers = "==4.34.0"
+sentencepiece = "*"
+ftfy = "==6.1.1"
+regex = "*"
+nltk = "==3.8.1"
+vision-datasets = "*"
+cython = "==3.0.2"
+pycocotools = "==2.0.7"
+diffdist = "*"
+pyarrow = "*"
+cityscapesscripts = "*"
+shapely = "*"
+scikit-image = "*"
+mup = "*"
+accelerate = "*"
+kornia = "==0.7.0"
+deepspeed = "*"
+wandb = "*"
+infinibatch = "*"
+gradio = "*"
+openai-whisper = { git = "https://github.com/openai/whisper.git" }
+einops = { git = "https://github.com/arogozhnikov/einops.git" }
+viser = "*"
 
 [environments]
 legacy = ["py27"]
 habitat = ["habitat"]
+xdecoder = ['xdecoder']
+
 
 
 # ######### Matterport3D tasks ###########
@@ -73,3 +123,27 @@ wget https://cvg-data.inf.ethz.ch/openscene/models/matterport_lseg.pth.tar \
 && mkdir -p ~/data/models \
 && mv matterport_lseg.pth.tar ~/data/models
 """
+
+
+# ######### SemanticKITTI tasks ###########
+[tasks.unzip_sem_kitti]
+cmd = """
+mkdir -p ~/data/semantic_kitti \
+&& unzip ~/data/data_odometry_color.zip -d ~/data/semantic_kitti
+"""
+[tasks.download_xdecoder]
+cmd = """
+wget https://huggingface.co/xdecoder/X-Decoder/resolve/main/xdecoder_focall_last.pt \
+&& mkdir -p ~/data/models \
+&& mv xdecoder_focall_last.pt ~/data/models
+"""
+
+[tasks.install_xdecoder]
+cmd = '''
+python -m pip install --no-build-isolation "git+https://github.com/MaureenZOU/detectron2-xyz.git"'''
+default-environment = "xdecoder"
+
+[tasks.extract_language_features_sem_kitti]
+cmd = """PYTHONPATH=.:third_party/X-Decoder python3 data_scripts/semantic_kitti/extract_lang_features.py"""
+default-environment = "xdecoder"
+

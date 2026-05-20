@@ -1,6 +1,6 @@
 defaults:
     - dataset: semantic_kitti
-    - visual_model: lseg  #open_scene
+    - visual_model: xdecoder  #open_scene
     - _self_
 
 paths:

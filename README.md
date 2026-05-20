@@ -1,6 +1,7 @@
 <h3 align="left">
   <a href="https://arxiv.org/abs/2512.15557">Paper</a> |
-  <a href="https://github.com/AIS-Bonn/omcl">Video (soon)</a>  
+  <a href="https://github.com/AIS-Bonn/omcl">Video (soon)</a> |
+  <a href="https://github.com/AIS-Bonn/omcl">Poster (soon)</a>  
 </h3>
 
 # OMCL: Open-vocabulary Monte Carlo Localization
@@ -67,8 +68,22 @@ Use the following commands to prepare the dataset:
 More details about Matterport 3D dataset can be found <a href="https://github.com/vlmaps/vlmaps#generate-dataset">here</a> and [here](https://github.com/facebookresearch/habitat-sim/blob/main/DATASETS.md#matterport3d-mp3d-dataset).\
 habitat-sim installation problems: https://github.com/facebookresearch/habitat-sim/issues/2147
 
-#### KITTI
-    soon
+#### SemanticKITTI
+* Download KITTI Odometry benchmark [color data 65 GB](https://www.cvlibs.net/datasets/kitti/eval_odometry.php)
+* Place all donwloaded files into the `~/data` folder:
+
+        ~ # user home directory ~
+        ├── data
+        │   ├── data_odometry_color.zip
+        │   ├── ...
+        │   ├── ...
+
+<p></p>
+
+* run:
+
+        pixi run unzip_sem_kitti
+
 
 # Matterport 3D
 ## Mapping
@@ -118,9 +133,15 @@ Press Enter to interact with the visualization.
 ![](media/global_loc.gif)
 
 
-# KITTI
+# SemanticKITTI
+
 ## Mapping
-    soon
+From this `.` directory without docker.
+
+    pixi run install_xdecoder
+    pixi run extract_language_features_sem_kitti
+
+
 ## Localization
     soon
 

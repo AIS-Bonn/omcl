@@ -39,6 +39,7 @@ wheel = "*"
 pkg-config = "*"
 ffmpeg = "*"
 mpi4py = "*"
+cuda-version = "12.1"
 
 [feature.xdecoder.pypi-dependencies]
 torch = "==2.1.0"

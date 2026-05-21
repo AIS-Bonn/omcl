@@ -16,6 +16,12 @@ opengl_mat = torch.tensor([
         [0, -1, 0],
         [0, 0,  -1]], dtype=torch.float32)
 
+
+def pose2viser_wxyz(pose):
+    quat_camera =  R.from_matrix(pose[:3,:3].cpu().float()).as_quat()
+    return (quat_camera[-1], *quat_camera[:-1])
+
+
 def mp3d_pose2viser_wxyz(pose):
     quat_camera =  R.from_matrix(pose[:3,:3].cpu().float() @ opengl_mat).as_quat()
     return (quat_camera[-1], *quat_camera[:-1])

@@ -98,6 +98,10 @@ From this `.` directory without docker:
     pixi run install_xdecoder
     pixi run extract_language_features_sem_kitti
 
+Inside the docker:
+
+    ./docker/run.sh 
+    python3 data_scripts/semantic_kitti/create_map.py
 
 ## Localization
     soon

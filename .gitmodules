@@ -1,3 +1,6 @@
 [submodule "third_party/X-Decoder"]
 	path = third_party/X-Decoder
 	url = https://github.com/microsoft/X-Decoder/
+[submodule "third_party/semantic-kitti-api"]
+	path = third_party/semantic-kitti-api
+	url = https://github.com/PRBonn/semantic-kitti-api

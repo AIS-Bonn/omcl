@@ -13,6 +13,7 @@ from PIL import Image
 from torchvision import transforms
 from detectron2.data import MetadataCatalog
 from detectron2.utils.colormap import random_color
+from tools import LABELS
 # import from X-Decoder
 from modeling.BaseModel import BaseModel
 from modeling import build_model
@@ -67,9 +68,13 @@ def process_frames(viser_server: viser.ViserServer, scene_name: str, config: Dic
         
     print(f"saving features database to {scene_dir}")
     all_features_db = model.model.sem_seg_head.predictor.lang_encoder.default_text_embeddings
+    
+    model.model.sem_seg_head.predictor.lang_encoder.get_text_embeddings( [v for v in LABELS.values()], is_eval=True)
+    scene_features =  model.model.sem_seg_head.predictor.lang_encoder.default_text_embeddings
+    assert scene_features.shape[0] == len(LABELS)
     torch.save({'features': all_features_db.cpu(),
                 'labels': [*range(len(all_features_db))],
-                'scene_features': all_features_db.cpu() # for visualization
+                'scene_features': scene_features.cpu()
                 },
                os.path.join(scene_dir, f"{config.visual_model.name}_features_db.pt"))
     print("Done!")
@@ -95,8 +100,8 @@ def main(config: DictConfig):
         opt, cmdline_args = load_opt_command(args)
         opt = init_distributed(opt)
         model = BaseModel(opt, build_model(opt)).from_pretrained(os.path.join(os.path.expanduser('~'), 'data/models', "xdecoder_focall_last.pt")).eval().cuda()
-        
-        # Open-set of labels used for localization on SemanticKITTI dataset
+         
+        # For simplicity, open-set labels are used to extract the image features
         open_labels_set = ['sky',
                         "car", 
                         "bicycle", 

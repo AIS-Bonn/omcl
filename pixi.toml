@@ -132,7 +132,8 @@ cmd = """
 mkdir -p ~/data/semantic_kitti \
 && unzip ~/data/data_odometry_color.zip -d ~/data/semantic_kitti \
 && unzip ~/data/data_odometry_velodyne.zip -d ~/data/semantic_kitti \
-&& unzip ~/data/data_odometry_labels.zip -d ~/data/semantic_kitti
+&& unzip ~/data/data_odometry_labels.zip -d ~/data/semantic_kitti \
+&& unzip -o ~/data/data_odometry_calib.zip -d ~/data/semantic_kitti
 """
 [tasks.download_xdecoder]
 cmd = """

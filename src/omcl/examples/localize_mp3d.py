@@ -13,10 +13,6 @@ from omcl.utils.plot import plot_floor
 from omcl.models.pf import estimate_loss, run
 
 
-def visualize_odometry():
-    pass
-
-
 @hydra.main(
     version_base=None,
     config_path="../../omcl/configs",

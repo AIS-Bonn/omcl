@@ -21,6 +21,7 @@ from utils.distributed import init_distributed
 from utils.arguments import load_opt_command
 from utils.visualizer import Visualizer
 from detectron2.utils.colormap import random_color
+import time
 
 
 def get_similarity_ids(image_features, features_db):
@@ -65,7 +66,11 @@ def process_frames(viser_server: viser.ViserServer, scene_name: str, config: Dic
             d_img = demo.get_image()
             cv2.imwrite(os.path.join(save_dir, f'{id_str}.png'), d_img)
             _ = viser_server.scene.add_camera_frustum(name='x-decoder', fov=90, aspect=d_img.shape[1]/d_img.shape[0], scale=1., image=d_img)
-        
+            time.sleep(1)
+        else:
+            cv2.imwrite(os.path.join(save_dir, f'{id_str}.png'), image_ori)
+            _ = viser_server.scene.add_camera_frustum(name='x-decoder', fov=90, aspect=d_img.shape[1]/d_img.shape[0], scale=1., image=image_ori)
+
     print(f"saving features database to {scene_dir}")
     all_features_db = model.model.sem_seg_head.predictor.lang_encoder.default_text_embeddings
     

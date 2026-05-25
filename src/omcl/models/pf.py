@@ -398,8 +398,8 @@ def run(scene_name, config, first_pose_id=0, device='cuda', viser_server=None, o
                         
                 if config.vis.demo:
                     image1 =  cv2.imread(os.path.join(str(Path(scene_dir).parent.absolute()), 'rgb', f"00000{i}"[-6:]+'.png'))
-                    plot_semantic_camera(image1, rgb_image, estimated, [0,255,0], hfov, aspect, viser_server)
+                    plot_semantic_camera(image1, rgb_image, estimated, [0,255,0], hfov, aspect, viser_server, config)
                 else:
-                    plot_camera_frame('mean_cam', estimated, [0,255,0], hfov, aspect, viser_server)
+                    plot_camera_frame('mean_cam', estimated, [0,255,0], hfov, aspect, viser_server, config)
         
     return poses44, estimated_poses, octree_map, precision_steps

@@ -38,9 +38,10 @@ vis:
     plot_data: False
     plot_rays: False
     plot_particles: True
-    particles_stride: 2
+    particles_stride: 16
     map_stride: 40
     num_colors: 500
     odom_stride: 20
     axes_length: 2.0
     axes_radius: 0.1
+    frustum_scale: 4.

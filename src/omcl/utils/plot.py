@@ -22,7 +22,7 @@ def rot2viser_wxyz(rot):
     return (quat_camera[-1], *quat_camera[:-1])
 
 
-def plot_camera_rgb(pose, rgb_image, hfov, aspect, viser_server, config, scale=0.25):
+def plot_camera_rgb(pose, rgb_image, hfov, aspect, viser_server, config):
     if rgb_image is None:
         image = None
     else:
@@ -31,7 +31,7 @@ def plot_camera_rgb(pose, rgb_image, hfov, aspect, viser_server, config, scale=0
                                               fov=hfov, 
                                               aspect=aspect, 
                                               position=pose[:3, -1].cpu(),
-                                              scale=scale,
+                                              scale=config.vis.frustum_scale,
                                               wxyz=pose2viser_wxyz(pose),
                                               image=image,
                                             color=[255,0,0],
@@ -46,17 +46,17 @@ def plot_paricles(particles, hfov, aspect, viser_server, config, visible=True):
                                                 fov=hfov, 
                                                 aspect=aspect, 
                                                 position=p[:3, -1].cpu(),
-                                                scale=0.25,
+                                                scale=config.vis.frustum_scale,
                                                 wxyz=pose2viser_wxyz(p),
                                                 visible=visible)
 
 
-def plot_camera_frame(name, pose, color, hfov, aspect, viser_server, image=None, scale=0.25):
+def plot_camera_frame(name, pose, color, hfov, aspect, viser_server, config, image=None):
     viser_server.scene.add_camera_frustum(name=name, 
                                               fov=hfov, 
                                               aspect=aspect, 
                                               position=pose[:3, -1].cpu(),
-                                              scale=scale,
+                                              scale=config.vis.frustum_scale,
                                               wxyz=pose2viser_wxyz(pose),
                                               image=image,
                                               color=color)
@@ -92,7 +92,7 @@ def plot_data_points(points, points_labels, d3_40_colors_rgb, viser_server):
         visible=False)
     
     
-def plot_semantic_camera(image1, image2, pose, color, hfov, aspect, viser_server):
+def plot_semantic_camera(image1, image2, pose, color, hfov, aspect, viser_server, config):
     if image1 is None or image2 is None:
         return
     image = np.zeros_like(image1)
@@ -102,7 +102,7 @@ def plot_semantic_camera(image1, image2, pose, color, hfov, aspect, viser_server
                                               fov=hfov, 
                                               aspect=aspect, 
                                               position=pose[:3, -1].cpu(),
-                                              scale=0.25,
+                                              scale=config.vis.frustum_scale,
                                               wxyz=pose2viser_wxyz(pose),
                                               image=image,
                                             color=color,
@@ -153,7 +153,7 @@ def plot_raycast_view(rays_o,
                                                     fov=math.radians(config.dataset.camera.hfov), 
                                                     aspect=aspect, 
                                                     position=particle[:3, -1].cpu(),
-                                                    scale=0.25,
+                                                    scale=config.vis.frustum_scale,
                                                     wxyz=pose2viser_wxyz(particle),
                                                     image=rays_image.reshape((config.dataset.camera.h, config.dataset.camera.w, 3))/255,
                                                     color=color,

@@ -2,14 +2,10 @@
 import numpy as np
 import os
 from tqdm.auto import tqdm, trange
-from omcl.models.odom import estimate_odoms
 import viser
-import yaml
 import torch
-from scipy.spatial.transform import Rotation as R
 import hydra
 from omegaconf import DictConfig
-from omcl.utils.plot import plot_floor
 from omcl.models.pf import run
 import clip
 from omcl.utils.mics import load_data
@@ -20,7 +16,6 @@ import kaolin as kal
 from omcl.models.pf import init_particles
 import math
 import trimesh
-import time
 
 
 def read_gt_mesh(scene_name, config):
@@ -271,7 +266,7 @@ def main(config: DictConfig):
     
     
     run_global_localization(prompt2, prompt2_features, pose2_id, config, prompt_color=(0,255,0))
-    printYellow("Initialization is finished. Press Enter to continue with the next demonstration.")
+    printGreen("Global Localization demonstration is finished. Press Enter to exit.")
     input()
     
     

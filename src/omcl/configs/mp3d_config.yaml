@@ -44,3 +44,4 @@ vis:
     odom_stride: -1
     axes_length: 0.25
     axes_radius: 0.02
+    frustum_scale: 0.25

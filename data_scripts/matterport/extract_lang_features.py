@@ -10,9 +10,9 @@ from scipy.spatial.transform import Rotation as R
 import hydra
 from omegaconf import DictConfig
 import cv2
-from tools import make_intrinsics, depth2pc, get_scene_features
+from tools import make_intrinsics, depth2pc, get_scene_features, opengl_mat
 
-from omcl.utils.plot import mp3d_pose2viser_wxyz
+from omcl.utils.plot import pose2viser_wxyz
 from omcl.utils.spatial import voxel_down_sample
 from omcl.utils.colors import d3_40_colors_rgb, generate_rgb_colors
 from omcl.utils.mics import mp3d_load_poses
@@ -28,7 +28,11 @@ def get_similarity_ids(image_features, features_db):
     return similarity_ids
 
 def process_frames(viser_server: viser.ViserServer, scene_name: str, config: DictConfig, lang_features_from_rgb):
-    scene_dir, poses44, T_init = mp3d_load_poses(scene_name, config)
+    scene_dir, poses44, _, _ = mp3d_load_poses(scene_name, config)
+    for p_i, p in enumerate(poses44):
+        viser_server.scene.add_frame(f"/poses44/p_{p_i}", position = p[:3, -1], 
+                                    wxyz=pose2viser_wxyz(p), origin_color=[0, 255,0],
+                                    axes_radius=config.vis.axes_radius, axes_length=config.vis.axes_length, visible=True)
     depth_dir = os.path.join(scene_dir, 'depth')
     rgb_dir = os.path.join(scene_dir, 'rgb')
     # for visualiztion
@@ -63,14 +67,14 @@ def process_frames(viser_server: viser.ViserServer, scene_name: str, config: Dic
         depth_img = np.load(os.path.join(depth_dir, f'{id_str}.npy'))
 
         i = int(id_str)
-        pose = (T_init @ poses44[i]).numpy()
+        pose = poses44[i].numpy()
         xyz, depth_mask = depth2pc(depth_img=depth_img, intrinsics=intrinsics)
         xyz, downs_idx = voxel_down_sample(xyz, 0.05)
-        vis_points = pose[:3, :3] @ xyz + pose[:3, -1][..., None]
+        vis_points = pose[:3, :3] @ opengl_mat.numpy() @ xyz + pose[:3, -1][..., None]
         colors = sem_img[depth_mask][downs_idx]
         viser_server.add_point_cloud(name="semantic_points", points=vis_points.T, colors=colors, point_size=0.01)
         _ = viser_server.scene.add_camera_frustum(name='semantic_image', fov=90, aspect=1,
-                                                  position=pose[:3, -1], scale=0.25, wxyz=mp3d_pose2viser_wxyz(torch.tensor(pose).float()),
+                                                  position=pose[:3, -1], scale=0.25, wxyz=pose2viser_wxyz(torch.tensor(pose).float()),
                                                   image=sem_img)
     print(f"saving features database to {scene_dir}")
     features_labels = [*range(len(all_features_db))]

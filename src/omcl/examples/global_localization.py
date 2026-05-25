@@ -23,17 +23,19 @@ import trimesh
 import time
 
 
-def read_gt_mesh(scene_name, poses44, config):
+def read_gt_mesh(scene_name, config):
     print("LOADING MESH")
     gt_dir = os.path.join(os.path.expanduser('~'), config.paths.all_data, 'mp3d')
     scene_name_raw = scene_name.split('_')[0]
     mesh = trimesh.load(os.path.join(gt_dir, scene_name_raw, f"{scene_name_raw}_semantic.ply"))
     print("MESH IS LOADED")
-    
+    data_path = os.path.join(os.path.expanduser('~'), config.paths.all_data,
+                         config.dataset.name, scene_name)
+    dt = torch.from_numpy(np.loadtxt( os.path.join(data_path,  "poses.txt"))).float()[0, :3]
     mesh.vertices = np.array(mesh.vertices) - np.array([
-                                                poses44[0][0, -1], 
-                                                poses44[0][1, -1], # pose_init_global[1, -1], 
-                                                poses44[0][2, -1] + config.dataset.simulation.camera_height # config.dataset.simulation.camera_height + pose_init_global[2, -1]
+                                                dt[0], 
+                                                dt[1], # pose_init_global[1, -1], 
+                                                dt[2] + config.dataset.simulation.camera_height # config.dataset.simulation.camera_height + pose_init_global[2, -1]
                                                 ])
     
     cropped_mesh = crop_mesh_by_height(mesh, 
@@ -117,13 +119,13 @@ def get_prompt_locations(floor_points, surrounding_points, map_features_db, surr
         return sparse_floor_points[scores > map_prompt_match_th].cpu()
 
 
-def make_particles_at_locations(T_init, pose0, locations, num_particles, rot_std=1.):
+def make_particles_at_locations(pose0, locations, num_particles, rot_std=1.):
     particles = []
     for i in range(num_particles):
-        p = (T_init @ pose0).detach().clone()
+        p = pose0.detach().clone()
         # p[:3, :3] = p[:3, :3] @ get_random_rot(0, 0.5, 0., device=p.device, dtype=p.dtype)
         p[:2, -1] = locations[torch.randint(len(locations), (1,))][0][:2]
-        particles.append(init_particles(p, T_init, std=[0, 0, rot_std], N=1)[0]) # apply random rotation and store the particle
+        particles.append(init_particles(p, std=[0, 0, rot_std], N=1)[0]) # apply random rotation and store the particle
     particles = torch.cat(particles, 0)
     return particles
 
@@ -153,9 +155,9 @@ def main(config: DictConfig):
     prompt2_features = encode_text(text_encoder, prompt2, device='cpu')
     pose2_id = 393
     # Load Map
-    (data_path, points, points_labels, poses44, T_init, 
+    (data_path, points, points_labels, poses44, _, _, 
       map_features_db, _, vis_scene_features) = load_data(scene, config, 'cuda')
-    scene_mesh = read_gt_mesh(scene, poses44, config)
+    scene_mesh = read_gt_mesh(scene, config)
     viser_mesh = viser_server.scene.add_mesh_trimesh('mesh', scene_mesh)
     print("Create octree map")
     points = points.cuda()
@@ -196,9 +198,9 @@ def main(config: DictConfig):
         # get access to the constant outer variables
         nonlocal floor_points, surrounding_points, surrounding_labels, map_features_db
         nonlocal hfov, aspect, viser_server, scene, scene_config
-        nonlocal T_init, poses44, octree_map
+        nonlocal poses44, octree_map
         printRed("The camera pose is ready.")
-        plot_camera_rgb(T_init @ poses44[pose_id], None, hfov, aspect, viser_server)
+        plot_camera_rgb(poses44[pose_id], None, hfov, aspect, viser_server, config)
         printGreen(f"The corresponding prompt is {prompt}.")
         
         possible_coordinates = get_prompt_locations(floor_points=floor_points,
@@ -219,9 +221,8 @@ def main(config: DictConfig):
         printYellow("Press Enter to continue.")
         input()
         # create particles in the prompt area
-        particles = make_particles_at_locations(T_init, poses44[0], possible_coordinates, config.num_particles)
-        plot_paricles(particles, hfov, aspect, viser_server, stride=config.vis.particles_stride, 
-                    visible=True)
+        particles = make_particles_at_locations(poses44[0], possible_coordinates, config.num_particles)
+        plot_paricles(particles, hfov, aspect, viser_server, config, visible=True)
         
         printGreen(f"Particles are initialized. Press Enter to continue.")
         input()
@@ -243,12 +244,11 @@ def main(config: DictConfig):
     input()
     # create random particles around the whole map
     print(f"Initialization area is {floor_points.shape[0]} voxels")
-    particles = make_particles_at_locations(T_init, poses44[0], floor_points[::10], config.num_particles)
+    particles = make_particles_at_locations(poses44[0], floor_points[::10], config.num_particles)
     
     
-    plot_paricles(particles, hfov, aspect, viser_server, stride=config.vis.particles_stride, 
-                  visible=True)
-    plot_camera_rgb(T_init @ poses44[pose0_id], None, hfov, aspect, viser_server)
+    plot_paricles(particles, hfov, aspect, viser_server, config, visible=True)
+    plot_camera_rgb(poses44[pose0_id], None, hfov, aspect, viser_server, config)
     
     printCyan("Particles are initialized. Press Enter to continue.")
     input()

@@ -15,6 +15,12 @@ scenes:
 mesh_max_res: 0.01 # in meters
 sem_gt_from_mesh: True
 
+camera:
+    w: 540
+    h: 540
+    hfov: 90 # for visualization
+
+
 simulation:
     download_poses: True   # don't download if exists
 

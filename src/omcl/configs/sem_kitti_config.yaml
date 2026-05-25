@@ -6,13 +6,10 @@ defaults:
 paths:
     all_data: 'data'
 
-semantic_grounding: True
+semantic_grounding: False
 
 num_particles: 512  # 1024
-std_t: 0.1
-std_rot: 0.1
 num_samples: 4096  # 1024
-in_3D: False
 
 particles_batch_size: 32 # 32, 256 looks good
 rays_loss_batch_size: 16  # 10
@@ -21,16 +18,29 @@ sampling: 'default'
 
 init_std_x: 0.3
 init_std_y: 0.3
+init_std_th: 0.1
+
+odom:
+    rot_x_std: 0.0
+    rot_y_std: 0.1
+    rot_z_std: 0.0
+    x_std: 0.1
+    y_std: 0.0
+    z_std: 0.1
 
 global_localization:
-    active: False
     distances: []
 
 vis:
     demo: False
     floor: False
     plot_gt: True
-    plot_estimated: True
+    plot_data: False
+    plot_rays: False
     plot_particles: True
     particles_stride: 2
-    num_colors: 200
+    map_stride: 40
+    num_colors: 500
+    odom_stride: 20
+    axes_length: 2.0
+    axes_radius: 0.1

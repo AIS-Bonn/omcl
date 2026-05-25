@@ -5,6 +5,12 @@ import os
 import yaml
 
 
+opengl_mat = torch.tensor([
+        [1, 0, 0],
+        [0, -1, 0],
+        [0, 0,  -1]], dtype=torch.float32) # for visualization
+
+
 def get_sim_cam_mat_with_fov(h, w, fov):
     # https://github.com/vlmaps/vlmaps/blob/master/vlmaps/utils/mapping_utils.py
     # https://codeyarns.com/tech/2015-09-08-how-to-compute-intrinsic-camera-matrix-for-a-camera.html#gsc.tab=0

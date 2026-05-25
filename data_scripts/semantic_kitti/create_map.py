@@ -7,13 +7,8 @@ import torch
 from scipy.spatial.transform import Rotation as R
 import hydra
 from omegaconf import DictConfig
-from omcl.utils.spatial import crop_height, voxel_down_sample
-from omcl.utils.colors import d3_40_colors_rgb, generate_rgb_colors
-from omcl.models.odom import combine_odoms, estimate_odoms
-from omcl.utils.mics import mp3d_load_poses
-from omcl.models.map import increment_map, merge_submaps, init_map
+from omcl.utils.spatial import voxel_down_sample
 from omcl.utils.plot import plot_floor, pose2viser_wxyz
-from omcl.models.image_encoders.minkowski.model import OpenSceneModel
 from omcl.models.processing import get_unique_features
 from tools import parse_calibration, parse_poses, COLOR_MAP, LABELS, remap_array
 import sys
@@ -92,7 +87,8 @@ def process(viser_server: viser.ViserServer, scene_name: str, config: DictConfig
             assert len(pts_map) == len(labels_map)
             assert len(pts_map) == len(_vis_colors_map)
             viser_server.scene.add_point_cloud(name="semantic_map", points=pts_map[::10], colors=_vis_colors_map[::10], point_size=0.05)
-    
+    # hide previous map
+    viser_server.scene.add_point_cloud(name="semantic_map", points=pts_map[::10], colors=_vis_colors_map[::10], point_size=0.05, visible=False)
     if len(all_points) > 0:
         points_submap = np.concatenate(all_points)
         sem_labels_submap = np.concatenate(all_sem_labels)
@@ -103,8 +99,6 @@ def process(viser_server: viser.ViserServer, scene_name: str, config: DictConfig
         labels_map = np.concatenate((labels_map, sem_labels_submap[downs_idx])).astype(np.long)
     
     sem_colors = np.array([v for v in COLOR_MAP.values()])
-    # hide previous map
-    viser_server.scene.add_point_cloud(name="semantic_map", points=pts_map[::10], colors=_vis_colors_map[::10], point_size=0.05, visible=False)
     # show actual map colored by labels variable
     viser_server.scene.add_point_cloud(name="final_map", points=pts_map[::10], colors=sem_colors[labels_map[::10].astype(np.long)], point_size=0.05)
     pts_map = torch.from_numpy(pts_map)

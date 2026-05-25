@@ -18,6 +18,7 @@ sampling: 'default'
 
 init_std_x: 0.3
 init_std_y: 0.3
+init_std_th: 0.1
 
 odom:
     rot_x_std: 0.0
@@ -34,7 +35,12 @@ vis:
     demo: False
     floor: False
     plot_gt: True
-    plot_estimated: True
+    plot_data: True
+    plot_rays: True
     plot_particles: True
     particles_stride: 32
+    map_stride: 2
     num_colors: 500
+    odom_stride: -1
+    axes_length: 0.25
+    axes_radius: 0.02

@@ -10,9 +10,8 @@ def combine_odoms(odoms, start, end):
     return mat
 
 
-def estimate_odoms(poses44, T_init):
+def estimate_odoms(poses44):
     # estimate all odoms
-    poses44 = T_init @ poses44
     # Ti = Ti-1 @ T - > T = Ti-1 ` @ Ti
     odoms = torch.cat((kal.math.quat.euclidean_identity(1, device=poses44.device), euclidean_inverse(poses44[:-1]) @ poses44[1:]))
     return odoms

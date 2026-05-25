@@ -4,63 +4,34 @@ from scipy.spatial.transform import Rotation as R
 import numpy as np
 
 
-def get_sim_cam_mat_with_fov(h, w, fov):
-    # https://github.com/vlmaps/vlmaps/blob/master/vlmaps/utils/mapping_utils.py
-    # https://codeyarns.com/tech/2015-09-08-how-to-compute-intrinsic-camera-matrix-for-a-camera.html#gsc.tab=0
-    cam_mat = np.eye(3)
-    cam_mat[0, 0] = cam_mat[1, 1] = w / (2.0 * np.tan(np.deg2rad(fov / 2)))
-    cam_mat[0, 2] = w / 2.0
-    cam_mat[1, 2] = h / 2.0
-    return cam_mat
-
-
-def create_rays(pose, height, width, fov, T_init):
-    pose2 = T_init.to(device=pose.device, dtype=pose.dtype) @ pose.clone().detach()
-    pose2[:3,:3] = pose[:3,:3].clone().detach()
-    calib_mat = get_sim_cam_mat_with_fov(h=height, w=width, fov=fov)
-    print(calib_mat)
-    print(calib_mat[0][0])
-    print(calib_mat[1][1])
+def create_rays(pose, height, width, fx, fy):
+    print('fx:', fx)
+    print('fy:', fy)
     cam=kal.render.camera.Camera.from_args(
-        view_matrix=pose2,
+        view_matrix= pose,
         # fov=90,
-        focal_x=calib_mat[0][0],
+        focal_x=fx,
         # x0=config.simulate.cam_calib_mat[2],
-        focal_y=calib_mat[1][1],
+        focal_y=fy,
         # y0=config.simulate.cam_calib_mat[5],
         width=width,
         height=height,
         device=pose.device)
-    
     rays_o, rays_d = kal.render.camera.generate_pinhole_rays(camera=cam)
-
     return rays_o, rays_d , cam
+
 
 def transform_rays(rays_o, rays_d, pose):
     rays_d_new = rays_d @ pose[:3,:3].T
     rays_o_new = rays_o + pose[:3,-1]
     return rays_o_new, rays_d_new
 
+
 def transform_rays_batched(rays_o, rays_d, batched_poses):
     rays_d_new = rays_d @ batched_poses[:, :3, :3].mT
     rays_o_new = rays_o + batched_poses[:, :3,-1][:, None, ...]
     return rays_o_new, rays_d_new
 
-def make_sem_image(closest_rays_indx, rays_labels):
-    raise NotImplementedError("fix dimensions")
-    sem_image = torch.zeros((1080*1080), dtype=torch.int)
-    sem_image[closest_rays_indx] = rays_labels
-    return sem_image
-
-
-# def init_rays(pose, rot_init, pose_init, config):
-#     position = rot_init @ (pose[:3] - pose_init)
-#     rotation = R.from_matrix(rot_init @ R.from_quat(pose[3:]).as_matrix()).as_quat()
-#     first_pose = torch.eye(4, dtype=float)
-#     first_pose[:3,:3] = torch.from_numpy(R.from_quat(rotation).as_matrix()).float()
-#     first_pose[:3, -1] = position
-#     rays_o, rays_d, cam = create_rays(first_pose, config)
-#     return rays_o, rays_d, cam
 
 def ray_trace_pose(rays_o_pose, rays_d_pose, spc, point_hierarchy, spc_features):
     ray_indx, point_indx, depth = kal.render.spc.unbatched_raytrace(
@@ -88,6 +59,7 @@ def ray_trace_pose(rays_o_pose, rays_d_pose, spc, point_hierarchy, spc_features)
     rays_ids = spc_features[closest_points_indx.cpu()- spc.pyramids[0,1,-2]]
     return closest_rays_indx, closest_points_indx, rays_ids
 
+
 def get_features_masks(input_data_mask, features_image, encodings, classes_ids):
     obs_features = features_image.reshape(features_image.shape[0]*features_image.shape[1], -1)
     prod = obs_features @ encodings.detach().T  # both assumed normalized before
@@ -96,6 +68,7 @@ def get_features_masks(input_data_mask, features_image, encodings, classes_ids):
     # get mask for each cls
     observation_masks = cls_ids[None] == classes_ids[..., None, None]
     return torch.logical_and(observation_masks, input_data_mask[None].to(observation_masks.device))
+
 
 def get_input_masks(input_data_mask, features_image, encodings, classes_ids, num_samples):
     observation_masks = get_features_masks(input_data_mask, features_image, encodings, classes_ids)
@@ -119,6 +92,7 @@ def get_input_masks_cropped(input_data_mask, features_image, encodings, classes_
             res.append(ids[torch.randperm(len(ids))[:min(len(ids), num_samples)]])
     return torch.cat(res)
 
+
 def ray_trace_pose_batched(rays_o_pose, rays_d_pose, spc, point_hierarchy, spc_features):
     closest_rays_indx, closest_points_indx, rays_ids = ray_trace_pose(rays_o_pose.reshape(-1,3), rays_d_pose.reshape(-1,3), spc, point_hierarchy, spc_features)
 
@@ -131,6 +105,3 @@ def ray_trace_pose_batched(rays_o_pose, rays_d_pose, spc, point_hierarchy, spc_f
     # _, closest_rays_indx_batched = torch.nonzero(batches_mask, as_tuple=True)
     return torch.nonzero(batches_mask, as_tuple=True)[1], closest_points_indx, rays_ids, batches_mask
     # return ALL_RAYS_IDS[batches_mask], closest_points_indx, rays_ids, batches_mask
-
-def ray_trace_particles():
-    pass

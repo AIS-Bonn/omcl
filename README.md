@@ -104,7 +104,10 @@ Inside the docker:
     python3 data_scripts/semantic_kitti/create_map.py
 
 ## Localization
-    soon
+
+SemanticKITTI + X-Decoder:
+
+    python3 omcl/examples/localize_sem_kitti.py
 
 
 # Citation

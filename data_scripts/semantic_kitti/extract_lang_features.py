@@ -96,11 +96,9 @@ def main(config: DictConfig):
             "--overrides",
             "RESUME_FROM", os.path.join(os.path.expanduser('~'), 'data/models', "xdecoder_focall_last.pt")
         ]
-
         opt, cmdline_args = load_opt_command(args)
         opt = init_distributed(opt)
         model = BaseModel(opt, build_model(opt)).from_pretrained(os.path.join(os.path.expanduser('~'), 'data/models', "xdecoder_focall_last.pt")).eval().cuda()
-         
         # For simplicity, open-set labels are used to extract the image features
         open_labels_set = ['sky',
                         "car", 
@@ -127,20 +125,19 @@ def main(config: DictConfig):
                         "pole",
                         "traffic-sign"
                         ]
-        model.model.sem_seg_head.predictor.lang_encoder.get_text_embeddings(open_labels_set, is_eval=True)
         metadata = MetadataCatalog.get('demo')
         _ = MetadataCatalog.get("demo").set(
             stuff_colors=[random_color(rgb=True, maximum=255).astype(np.int).tolist() for _ in range(len(open_labels_set))],
             stuff_classes=open_labels_set,
             stuff_dataset_id_to_contiguous_id={x:x for x in range(len(open_labels_set))},
         )
-                
-        model.model.metadata = metadata
-        model.model.sem_seg_head.num_classes = len(open_labels_set)
     
     with torch.no_grad():    
         for scene in config.dataset.scenes:
             print("Scene: ", scene)
+            model.model.sem_seg_head.predictor.lang_encoder.get_text_embeddings(open_labels_set, is_eval=True)
+            model.model.metadata = metadata
+            model.model.sem_seg_head.num_classes = len(open_labels_set)
             process_frames(viser_server, scene_name=scene, config=config, model=model)
 
 

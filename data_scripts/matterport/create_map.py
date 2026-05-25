@@ -9,13 +9,15 @@ import hydra
 from omegaconf import DictConfig
 from omcl.utils.spatial import crop_height
 from omcl.utils.colors import d3_40_colors_rgb, generate_rgb_colors
-from tools import make_intrinsics, depth2pc
+from tools import make_intrinsics, depth2pc, opengl_mat
 from omcl.models.odom import combine_odoms, estimate_odoms
 from omcl.utils.mics import mp3d_load_poses
 from omcl.models.map import increment_map, merge_submaps, init_map
 from omcl.utils.plot import plot_floor
 from omcl.models.image_encoders.minkowski.model import OpenSceneModel
 from omcl.models.processing import get_unique_features
+from omcl.utils.plot import pose2viser_wxyz
+import time
 
 
 def get_map_dict_features(data_path, config, device):
@@ -34,8 +36,12 @@ def get_map_dict_features(data_path, config, device):
     return rgb_features_db.to(device), rgb_features_labels, scene_features.to(device)
 
 
-def generate_gt(viser_server: viser.ViserServer, scene_name: str, config: DictConfig, submap_size=500):
-    scene_dir, poses44, T_init = mp3d_load_poses(scene_name, config)
+def generate_map(viser_server: viser.ViserServer, scene_name: str, config: DictConfig, submap_size=500):
+    scene_dir, poses44, _, _ = mp3d_load_poses(scene_name, config)
+    for p_i, p in enumerate(poses44):
+        viser_server.scene.add_frame(f"/poses44/p_{p_i}", position = p[:3, -1], 
+                                    wxyz=pose2viser_wxyz(p), origin_color=[0, 255,0],
+                                    axes_radius=config.vis.axes_radius, axes_length=config.vis.axes_length, visible=True)
     scene_config = config.dataset.scenes_config[scene_name]
     depth_dir = os.path.join(scene_dir, 'depth')
     semantic_dir = os.path.join(scene_dir, f'{config.visual_model.name}_semantic')
@@ -53,13 +59,13 @@ def generate_gt(viser_server: viser.ViserServer, scene_name: str, config: DictCo
         assert len(depth_images) == len(os.listdir(semantic_dir)) // 2
     # configure
     intrinsics = make_intrinsics(config)
-    odoms = estimate_odoms(poses44, T_init)
+    odoms = estimate_odoms(poses44)
     min_height  = -config.dataset.simulation.camera_height + scene_config.min_height
     device = 'cuda'
     submaps = []
     map_points, map_features, map_n_means = init_map(config, device, feature_size=config.visual_model.features_size)
     # initial states
-    pose = T_init @ poses44[0]
+    pose = poses44[0]
     i_prev = 0
     rgb_features_db, rgb_labels_db, vis_scene_features = get_map_dict_features(scene_dir, config, device)
     # for visualiztion
@@ -70,32 +76,32 @@ def generate_gt(viser_server: viser.ViserServer, scene_name: str, config: DictCo
         odom = combine_odoms(odoms, i_prev, i)
         i_prev = i
         pose = (pose @ odom)
-        pose_dev = pose.to(device)  # cropping on cpu to save memory
+        pose_dev = pose.to(device)
         depth_img = np.load(os.path.join(depth_dir, f'{id_str}.npy'))            
         # transform and preprocess data
         xyz, depth_mask = depth2pc(depth_img=depth_img, intrinsics=intrinsics)
-        xyz, crop_mask = crop_height(xyz, pose, scene_config.max_height, min_height)
+        xyz = (pose_dev[:3, :3] @ opengl_mat.to(device) @ torch.from_numpy(xyz).to(device) + pose_dev[:3, -1][..., None])
+        xyz, crop_mask = crop_height(xyz, scene_config.max_height, min_height)
+        xyz = xyz.T
         if PREDICT_ON_POINTS:
             xyz_features = None
         else:
             obs_data = torch.load(os.path.join(semantic_dir, f'{id_str}.pt'))
             features_img = rgb_features_db[obs_data]
             xyz_features = features_img[depth_mask][crop_mask].to(device)
-        xyz = (pose_dev[:3, :3] @ torch.from_numpy(xyz).to(device) + pose_dev[:3, -1][..., None]).T
+        
         # mapping
         map_points, map_features, map_n_means = increment_map(map_points, map_features, xyz, xyz_features, map_n_means, 
                       max_level=scene_config.max_level, resolution=scene_config.resolution, device=device)
-        
-        
         if ((seq_num % submap_size == 0) and (seq_num > 0)) or (seq_num == last_data_id):
             print(f'new submap: {seq_num}/{len(ids)}')
             submaps.append((map_points.cpu(), map_features.cpu(), map_n_means.cpu()))
             # visualization
             if not PREDICT_ON_POINTS:
                 colors = sem_colors[(map_features @ rgb_features_db.T).cpu().argmax(-1)]
-                viser_server.add_point_cloud(name="submap", points=submaps[-1][0].numpy(), colors=colors, point_size=scene_config.resolution)
+                viser_server.scene.add_point_cloud(name="submap", points=submaps[-1][0].numpy(), colors=colors, point_size=scene_config.resolution)
             else:
-                viser_server.add_point_cloud(name="submap", points=submaps[-1][0].numpy(), colors=np.ones((len(submaps[-1][0]), 3))* 0.5, point_size=scene_config.resolution)
+                viser_server.scene.add_point_cloud(name="submap", points=submaps[-1][0].numpy(), colors=np.ones((len(submaps[-1][0]), 3))* 0.5, point_size=scene_config.resolution)
             # init next submap
             map_points, map_features, map_n_means = init_map(config, device, feature_size=config.visual_model.features_size)
 
@@ -119,7 +125,7 @@ def generate_gt(viser_server: viser.ViserServer, scene_name: str, config: DictCo
     idx = (map_features.cuda() @ map_features_db.T.cuda()).cpu().argmax(-1)
     
     vis_ids = (map_features_db[idx].cuda() @ vis_scene_features.T).argmax(-1).cpu()
-    viser_server.add_point_cloud(name="map", points=map_points[::2].cpu().numpy(), colors=sem_colors[vis_ids][::2], point_size=scene_config.resolution)
+    viser_server.scene.add_point_cloud(name="map", points=map_points[::2].cpu().numpy(), colors=sem_colors[vis_ids][::2], point_size=scene_config.resolution)
 
     torch.save({'points': map_points, 
                 'points_features_idx': idx,
@@ -140,8 +146,9 @@ def main(config: DictConfig):
     for scene in config.dataset.scenes:
         print(scene)
         plot_floor(scene, config, viser_server)
-        generate_gt(viser_server, scene_name=scene, config=config, submap_size=100)
-
+        generate_map(viser_server, scene_name=scene, config=config, submap_size=100)
+    print('Exiting...')
+    time.sleep(5)
 
 if __name__ == '__main__':
     main()

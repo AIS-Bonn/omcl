@@ -32,11 +32,10 @@ def voxel_down_sample(points, voxel_size):
         return points[idx], idx
     
     
-def crop_height(local_points, pose, height, min_height):
-    global_points = pose[:3, :3] @ local_points + pose[:3, -1][..., None]
-    height_mask1 = global_points[-1,:] < height
-    height_mask2 = global_points[-1,:] > min_height
+def crop_height(pts, height, min_height):
+    height_mask1 = pts[-1,:] < height
+    height_mask2 = pts[-1,:] > min_height
     height_mask = torch.logical_and(height_mask1, height_mask2)
-    return local_points[:, height_mask], height_mask
+    return pts[:, height_mask], height_mask
 
 

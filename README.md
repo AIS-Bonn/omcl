@@ -1,7 +1,7 @@
 <h3 align="left">
   <a href="https://arxiv.org/abs/2512.15557">Paper</a> |
   <a href="https://github.com/AIS-Bonn/omcl">Video (soon)</a> |
-  <a href="https://github.com/AIS-Bonn/omcl">Poster (soon)</a>  
+  <a href="media/poster.pdf">Poster</a>  
 </h3>
 
 # OMCL: Open-vocabulary Monte Carlo Localization

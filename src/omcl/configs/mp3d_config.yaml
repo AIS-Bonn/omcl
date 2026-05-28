@@ -8,11 +8,11 @@ paths:
 
 semantic_grounding: False
 
-num_particles: 1024  # 256 1024
-num_samples: 1024  # 4096 1024
+num_particles: 1024
+num_samples: 1024
 
-particles_batch_size: 128 # 32, 256
-rays_loss_batch_size: 16  # 10
+particles_batch_size: 128
+rays_loss_batch_size: 16
 sampling: 'default'
 
 

@@ -109,6 +109,8 @@ SemanticKITTI + X-Decoder:
 
     python3 omcl/examples/localize_sem_kitti.py
 
+![](media/kitti_gif.gif
+)
 
 # Citation
 

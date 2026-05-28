@@ -1,16 +1,10 @@
 
 import numpy as np
-import os
-from tqdm.auto import tqdm
-from omcl.models.odom import estimate_odoms
 import viser
-import yaml
-import torch
-from scipy.spatial.transform import Rotation as R
 import hydra
 from omegaconf import DictConfig
 from omcl.utils.plot import plot_floor
-from omcl.models.pf import estimate_loss, run
+from omcl.models.pf import run
 
 
 @hydra.main(
@@ -25,7 +19,8 @@ def main(config: DictConfig):
         plot_floor(scene, config, viser_server)
         # data_path, points, points_labels, poses44, pose_init, rot_init, features_db, features_labels = load_data('5LpN3gDmAk7_1', config)
         # odoms = estimate_odoms(poses44, pose_init, rot_init)
-
+        # viser_server.initial_camera.position = np.array([ 36.59388359, -59.70568682, 246.16176265])
+        # viser_server.initial_camera.look_at = np.array([172.51614205, -41.75260087, -66.64686478])
         poses44, estimated_poses, octree_map, precision_steps = run(scene, config, first_pose_id=0, device='cuda', viser_server=viser_server, batch_size=config.particles_batch_size)
     
 

@@ -143,10 +143,10 @@ def main(config: DictConfig):
     pose0_id = 150
     # Prepare prompts
     text_encoder, _ = clip.load("ViT-B/32", device='cpu', jit=False)
-    prompt1 =  ['toilet', 'mirro', 'towel', 'sink']
+    prompt1 =  ['toilet', 'mirror', 'towel', 'sink']
     prompt1_features = encode_text(text_encoder, prompt1, device='cpu')
     pose1_id = 40
-    prompt2 = ['table', 'chair', 'picture', 'door', 'tv monitor']
+    prompt2 = ['rug', 'shelving', 'cabinet', 'picture']
     prompt2_features = encode_text(text_encoder, prompt2, device='cpu')
     pose2_id = 393
     # Load Map
@@ -204,7 +204,7 @@ def main(config: DictConfig):
                                     surrounding_labels=surrounding_labels, 
                                     prompt_encodings=prompt_features, 
                                     th=0.9,
-                                    map_prompt_match_th=0.7
+                                    map_prompt_match_th=0.9
                                     )
         printYellow(f"Initialization area is {possible_coordinates.shape[0]} voxels.")
         viser_server.scene.add_point_cloud(

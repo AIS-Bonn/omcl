@@ -1,6 +1,6 @@
 <h3 align="left">
   <a href="https://arxiv.org/abs/2512.15557">Paper</a> |
-  <a href="https://github.com/AIS-Bonn/omcl">Video (soon)</a> |
+  <a href="https://www.youtube.com/watch?v=kc5wiWgp1dQ">Video</a> |
   <a href="media/poster.pdf">Poster</a>  
 </h3>
 

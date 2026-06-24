@@ -2,6 +2,13 @@
   <a href="https://arxiv.org/abs/2512.15557">Paper</a> |
   <a href="https://www.youtube.com/watch?v=kc5wiWgp1dQ">Video</a> |
   <a href="media/poster.pdf">Poster</a>  
+  <a href="https://pixi.sh">
+    <img
+      src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/prefix-dev/pixi/main/assets/badge/v0.json"
+      alt="Pixi Badge"
+      align="right"
+    />
+  </a>
 </h3>
 
 # OMCL: Open-vocabulary Monte Carlo Localization
